@@ -1,0 +1,197 @@
+/* STATUS: DIAMANT VGT SUPREME */
+/**
+ * AstraeaOS Command Palette Styling (Ctrl+K).
+ * Obsidian glass modal, fuzzy result list, and keyboard action hints.
+ */
+
+.astraea-cmd-box {
+    width: 90%;
+    max-width: 640px;
+    border-radius: var(--astraea-radius-lg);
+    border: 1px solid var(--astraea-border-glow);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 210, 255, 0.15);
+    overflow: hidden;
+    animation: astraea-fade-in-down 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes astraea-fade-in-down {
+    from {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.astraea-cmd-searchbar {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--astraea-border-subtle);
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.astraea-cmd-search-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--astraea-color-primary);
+    flex-shrink: 0;
+}
+
+.astraea-cmd-input,
+.wp-core-ui .astraea-cmd-input,
+.astraea-cmd-input:focus,
+.wp-core-ui .astraea-cmd-input:focus {
+    flex: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    color: var(--astraea-text-primary) !important;
+    font-size: var(--astraea-font-size-base) !important;
+    font-family: var(--astraea-font-sans) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+}
+
+.astraea-cmd-esc-hint {
+    font-size: var(--astraea-font-size-xs);
+    color: var(--astraea-text-muted);
+}
+
+.astraea-cmd-esc-hint kbd {
+    background: var(--astraea-surface-l1);
+    border: 1px solid var(--astraea-border-subtle);
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+
+/* Results Area */
+.astraea-cmd-results {
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.astraea-cmd-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: var(--astraea-radius-sm);
+    cursor: pointer;
+    transition: var(--astraea-transition-fast);
+    border: 1px solid transparent;
+}
+
+.astraea-cmd-item:hover,
+.astraea-cmd-item.is-selected {
+    background: var(--astraea-surface-hover);
+    border-color: var(--astraea-border-glow);
+}
+
+.astraea-cmd-item.is-selected {
+    background: var(--astraea-color-primary-dim);
+}
+
+.astraea-cmd-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.astraea-cmd-item-icon {
+    font-size: 15px;
+    color: var(--astraea-color-primary);
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--astraea-surface-l1);
+    border-radius: var(--astraea-radius-xs);
+    flex-shrink: 0;
+    overflow: hidden;
+    line-height: 1;
+}
+
+.astraea-cmd-item-title {
+    font-size: var(--astraea-font-size-sm);
+    font-weight: 500;
+    color: var(--astraea-text-primary);
+}
+
+.astraea-cmd-item-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.astraea-cmd-item-cat {
+    font-size: 11px;
+    color: var(--astraea-text-muted);
+    background: var(--astraea-surface-l1);
+    border-radius: var(--astraea-radius-xs);
+    padding: 2px 6px;
+}
+
+.astraea-cmd-item-shortcut {
+    font-size: 10px;
+    font-family: var(--astraea-font-mono);
+    color: var(--astraea-text-muted);
+    background: var(--astraea-surface-l2);
+    border: 1px solid var(--astraea-border-subtle);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.astraea-cmd-empty {
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--astraea-text-muted);
+    font-size: var(--astraea-font-size-sm);
+}
+
+/* Footer */
+.astraea-cmd-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid var(--astraea-border-subtle);
+    font-size: 11px;
+    color: var(--astraea-text-muted);
+}
+
+.astraea-cmd-shortcuts {
+    display: flex;
+    gap: 14px;
+}
+
+.astraea-cmd-shortcuts kbd {
+    background: var(--astraea-surface-l1);
+    border: 1px solid var(--astraea-border-subtle);
+    border-radius: 3px;
+    padding: 1px 4px;
+    color: var(--astraea-text-primary);
+}
+
+.astraea-cmd-branding {
+    font-weight: 600;
+    color: var(--astraea-color-primary);
+}

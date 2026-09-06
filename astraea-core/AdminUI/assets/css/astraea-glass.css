@@ -1,0 +1,95 @@
+/**
+ * AstraeaOS WP — Glass Surface Architecture
+ * STATUS: DIAMANT VGT SUPREME
+ * Version: 2.1
+ */
+
+/* ==========================================================================
+   Base App Ambient Layer
+   ========================================================================== */
+body.wp-admin,
+body.astraea-glass-shell {
+    background-color: var(--ast-bg-app) !important;
+    background-image: var(--ast-bg-radial-1), var(--ast-bg-radial-2) !important;
+    background-attachment: fixed !important;
+    background-repeat: no-repeat !important;
+    color: var(--ast-text-primary) !important;
+    font-family: var(--ast-font-sans) !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================================================================
+   Glass Level 1 — Ambient / Subtle Panels (Submenu, Table Rows, Cards)
+   ========================================================================== */
+.ast-glass-l1,
+.astraea-glass-surface-l1 {
+    background: var(--ast-surface-glass-l1);
+    backdrop-filter: blur(var(--ast-blur-l1));
+    -webkit-backdrop-filter: blur(var(--ast-blur-l1));
+    border: 1px solid var(--ast-border-subtle);
+    box-shadow: var(--ast-shadow-glass);
+}
+
+/* ==========================================================================
+   Glass Level 2 — Structural Elements (Sidebar, TopBar, Dashboard Panels)
+   ========================================================================== */
+.ast-glass-l2,
+.astraea-glass-surface-l2 {
+    background: var(--ast-surface-glass-l2);
+    backdrop-filter: blur(var(--ast-blur-l2));
+    -webkit-backdrop-filter: blur(var(--ast-blur-l2));
+    border: 1px solid var(--ast-border-glass);
+    box-shadow: var(--ast-shadow-glass), var(--ast-border-specular);
+}
+
+/* ==========================================================================
+   Glass Level 3 — Floating Overlays (Command Palette, Modals, Drawers)
+   ========================================================================== */
+.ast-glass-l3,
+.astraea-glass-surface-l3 {
+    background: var(--ast-surface-glass-l3);
+    backdrop-filter: blur(var(--ast-blur-l3));
+    -webkit-backdrop-filter: blur(var(--ast-blur-l3));
+    border: 1px solid var(--ast-border-strong);
+    box-shadow: var(--ast-shadow-elevated), var(--ast-border-specular);
+}
+
+/* ==========================================================================
+   Graceful Degradation Fallbacks for Browsers without Backdrop-Filter
+   ========================================================================== */
+@supports not (backdrop-filter: blur(10px)) {
+    .ast-glass-l1,
+    .astraea-glass-surface-l1 {
+        background: var(--ast-surface-elevated) !important;
+    }
+    .ast-glass-l2,
+    .astraea-glass-surface-l2 {
+        background: var(--ast-surface-elevated) !important;
+    }
+    .ast-glass-l3,
+    .astraea-glass-surface-l3 {
+        background: var(--ast-surface-elevated) !important;
+    }
+}
+
+/* ==========================================================================
+   Interactive Specular Shimmer & Glow Utilities
+   ========================================================================== */
+.ast-glow-accent {
+    box-shadow: var(--ast-accent-glow);
+}
+
+.ast-border-specular {
+    box-shadow: var(--ast-border-specular);
+}
+
+.ast-card-hover {
+    transition: transform var(--ast-transition-fast), border-color var(--ast-transition-fast), box-shadow var(--ast-transition-fast);
+}
+
+.ast-card-hover:hover {
+    transform: translateY(-2px);
+    border-color: var(--ast-border-strong);
+    box-shadow: var(--ast-shadow-elevated), var(--ast-accent-glow);
+}

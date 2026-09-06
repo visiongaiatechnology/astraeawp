@@ -1,0 +1,92 @@
+<!-- STATUS: PLATIN -->
+<!doctype html>
+<html class="wp-toolbar astraea-loaded" lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AstraeaOS Admin Shell Smoke Test</title>
+    <link rel="stylesheet" href="../../wp-includes/css/admin-bar.css">
+    <link rel="stylesheet" href="../../wp-admin/css/common.css">
+    <link rel="stylesheet" href="../../wp-admin/css/admin-menu.css">
+    <link rel="stylesheet" href="../../wp-admin/css/forms.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-tokens.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-glass.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-shell.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-components.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-dashboard.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-tables.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-legacy-surfaces.css">
+    <link rel="stylesheet" href="../../astraea-core/AdminUI/assets/css/astraea-workspace.css">
+</head>
+<body class="wp-admin admin-bar astraea-glass-shell astraea-theme-dark astraea-loaded">
+<div id="wpwrap">
+    <div id="wpadminbar" role="navigation" aria-label="Werkzeugleiste">
+        <div class="quicklinks">
+            <ul id="wp-admin-bar-root-default">
+                <li id="wp-admin-bar-astraea-brand" class="menupop">
+                    <a class="ab-item" href="#">
+                        <span class="astraea-bar-brand">
+                            <img class="astraea-bar-logo" src="../../astraea-core/AdminUI/assets/img/astraea-brand-2026.png" alt="AstraeaOS" width="20" height="20">
+                            <span class="astraea-bar-name">Astraea<strong>OS</strong></span>
+                            <span class="astraea-bar-badge">0.6.0-alpha</span>
+                        </span>
+                    </a>
+                </li>
+                <li id="wp-admin-bar-astraea-search-trigger" class="astraea-search-node"><button class="astraea-cmd-trigger" type="button"><span class="cmd-text">Search or run command…</span><kbd class="cmd-shortcut">Ctrl K</kbd></button></li>
+                <li id="wp-admin-bar-site-name"><a class="ab-item" href="#">⌂ Testseite</a></li>
+                <li id="wp-admin-bar-updates"><a class="ab-item" href="#" aria-label="Eine Aktualisierung">↻ <span class="ab-label">1</span></a></li>
+                <li id="wp-admin-bar-comments"><a class="ab-item" href="#" aria-label="Keine Kommentare">◇ <span class="ab-label">0</span></a></li>
+                <li id="wp-admin-bar-new-content"><a class="ab-item" href="#">+ Neu</a></li>
+            </ul>
+            <ul id="wp-admin-bar-top-secondary">
+                <li class="astraea-hud-node"><a class="ab-item" href="#"><span class="astraea-hud-badge"><span class="hud-dot"></span>GeDefense</span></a></li>
+                <li><div class="ab-item"><button type="button" class="astraea-bar-icon-btn" aria-label="Benachrichtigungen">♧</button></div></li>
+                <li><div class="ab-item"><button type="button" class="astraea-bar-icon-btn" aria-label="Darstellung">☾</button></div></li>
+                <li id="wp-admin-bar-my-account"><a class="ab-item" href="#">TheBrain</a></li>
+            </ul>
+        </div>
+    </div>
+    <div id="adminmenumain" role="navigation" aria-label="Hauptmenü">
+        <div id="adminmenuback"></div>
+        <div id="adminmenuwrap">
+            <ul id="adminmenu">
+            <li class="wp-has-current-submenu wp-menu-open menu-top">
+                <a class="menu-top" href="#"><span class="wp-menu-image">◈</span><span class="wp-menu-name">Dashboard</span></a>
+                <ul class="wp-submenu"><li class="current"><a href="#">Start</a></li><li><a href="#">Aktualisierungen</a></li><li><a href="#">GeDefense HUD</a></li></ul>
+            </li>
+            <li class="menu-top"><a class="menu-top" href="#"><span class="wp-menu-image">◆</span><span class="wp-menu-name">Beiträge</span></a></li>
+            <li class="menu-top"><a class="menu-top" href="#"><span class="wp-menu-image">◇</span><span class="wp-menu-name">Medien</span></a></li>
+            <li class="menu-top"><a class="menu-top" href="#"><span class="wp-menu-image">▣</span><span class="wp-menu-name">Seiten</span></a></li>
+            <li class="menu-top"><a class="menu-top" href="#"><span class="wp-menu-image">⚙</span><span class="wp-menu-name">VGT Suite</span></a></li>
+            </ul>
+        </div>
+    </div>
+    <main id="wpcontent">
+        <div id="astraea-topbar-extension" class="astraea-topbar-glass">
+            <nav class="astraea-breadcrumbs" aria-label="Breadcrumbs"><ol class="astraea-crumb-list"><li class="astraea-crumb-item"><a class="astraea-crumb-link" href="#">AstraeaOS</a><span class="astraea-crumb-separator">/</span></li><li class="astraea-crumb-item is-current"><span class="astraea-crumb-current">Control Center</span></li></ol></nav>
+            <div class="astraea-header-actions"><div class="astraea-quick-actions"><a class="astraea-btn astraea-btn-sm astraea-btn-ghost" href="#">+ Post</a><a class="astraea-btn astraea-btn-sm astraea-btn-ghost" href="#">+ Page</a></div></div>
+        </div>
+        <div id="wpbody" role="main">
+        <section class="wrap astraea-admin-wrap">
+            <h1>Workspace · Komponentenprüfung</h1>
+            <nav class="nav-tab-wrapper avlp-tabs" aria-label="Privacy Navigation"><a class="nav-tab nav-tab-active" href="#ui-comments">Übersicht</a><a class="nav-tab" href="#ui-comments">Dienste</a><a class="nav-tab" href="#ui-comments">Scanner</a><a class="nav-tab" href="#ui-comments">Dattrack</a><a class="nav-tab" href="#ui-comments">Einstellungen</a></nav>
+            <table id="ui-comments" class="wp-list-table widefat striped comments"><thead><tr><th>Autor</th><th>Kommentar</th><th>Aktionen</th></tr></thead><tbody><tr><td><strong>Testkommentar</strong><p class="description">Lokale UI-Testdaten</p></td><td class="column-comment"><p>Hallo, dies ist ein Kommentar. Dieser Text muss auch auf dunklen Flächen lesbar bleiben.</p><p><a href="#ui-comments">Beitrag anzeigen</a></p></td><td><div class="row-actions"><a href="#ui-comments">Bearbeiten</a></div></td></tr></tbody></table>
+            <div class="postbox"><div class="postbox-header"><h2>Einstellungen</h2></div><div class="inside"><p>Einheitliche Formulare und lesbare Hilfetexte.</p><label for="ui-title">Titel</label> <input id="ui-title" type="text" placeholder="Seitentitel"><button type="button" class="button button-primary">Speichern</button> <button type="button" class="button" disabled>Deaktiviert</button></div></div>
+            <header class="astraea-page-header">
+                <div class="astraea-page-brand"><img src="../../astraea-core/AdminUI/assets/img/astraea-brand-2026.png" alt="AstraeaOS Logo" class="astraea-page-logo"><div class="astraea-page-copy"><span class="astraea-page-eyebrow">SOVEREIGN DEFENSE FABRIC</span><h1 class="astraea-page-title">GeDefense Multi-Layer Security HUD</h1><p class="astraea-page-sub">Next-generation defense architecture embedded in the AstraeaOS WP core.</p></div></div>
+                <div class="astraea-page-health"><span class="astraea-status-badge active"><span class="pulse-dot"></span>SYSTEM HEALTHY</span><span class="astraea-page-build">ASTRAEA 0.2.0-ALPHA</span></div>
+            </header>
+            <div class="astraea-signal-strip" aria-label="Security telemetry summary"><div class="astraea-signal"><span class="signal-label">Defense layers</span><strong>05</strong><span class="signal-state">linked</span></div><div class="astraea-signal"><span class="signal-label">Crypto fabric</span><strong>AEAD</strong><span class="signal-state">verified</span></div><div class="astraea-signal"><span class="signal-label">Runtime</span><strong>8.5.8</strong><span class="signal-state">PHP</span></div><div class="astraea-signal"><span class="signal-label">Remote assets</span><strong>ZERO</strong><span class="signal-state">sovereign</span></div></div>
+            <div class="astraea-cc-grid security-details-grid">
+                <article class="astraea-cc-card astraea-glass-surface-l2 is-cerberus"><div class="card-header"><div class="card-title"><span class="card-icon">◈</span><h3>Cerberus L0 Request Firewall</h3></div><span class="astraea-status-pill success">ACTIVE</span></div><div class="card-body"><p class="card-desc">Pre-router inspection operational.</p><ul class="astraea-spec-list"><li><strong>Traversal Guard</strong><span>Active</span></li><li><strong>Null-Byte Defense</strong><span>Enforced</span></li><li><strong>Rate Limiting</strong><span>Engaged</span></li></ul></div></article>
+                <article class="astraea-cc-card astraea-glass-surface-l2 is-zeus"><div class="card-header"><div class="card-title"><span class="card-icon">⚡</span><h3>Zeus Cryptographic Kernel</h3></div><span class="astraea-status-pill success">ACTIVE</span></div><div class="card-body"><p class="card-desc">Argon2id + Sodium AEAD verified via live round-trip.</p><ul class="astraea-spec-list"><li><strong>Password Hashing</strong><span>Argon2id</span></li><li><strong>Encryption</strong><span>XChaCha20</span></li><li><strong>Key Rotation</strong><span>Active</span></li></ul></div></article>
+                <article class="astraea-cc-card astraea-glass-surface-l2 is-aegis"><div class="card-header"><div class="card-title"><span class="card-icon">⬡</span><h3>Aegis Header Armor</h3></div><span class="astraea-status-pill success">ACTIVE</span></div><div class="card-body"><p class="card-desc">Security headers actively enforced over HTTPS.</p><ul class="astraea-spec-list"><li><strong>Content-Type</strong><span>nosniff</span></li><li><strong>Frame Policy</strong><span>SAMEORIGIN</span></li><li><strong>HSTS</strong><span>Fail-safe</span></li></ul></div></article>
+                <article class="astraea-cc-card astraea-glass-surface-l2 is-hades"><div class="card-header"><div class="card-title"><span class="card-icon">◇</span><h3>Hades &amp; FileGuard Quarantine</h3></div><span class="astraea-status-pill warning">WARNING</span></div><div class="card-body"><p class="card-desc">Upload execution barrier requires attention.</p><ul class="astraea-spec-list"><li><strong>Execution Shield</strong><span>Guard active</span></li><li><strong>Double Extensions</strong><span>Blocked</span></li><li><strong>Remote CDNs</strong><span>Zero</span></li></ul></div></article>
+                <article class="astraea-cc-card astraea-glass-surface-l2 is-vault"><div class="card-header"><div class="card-title"><span class="card-icon">▣</span><h3>Astraea Vault Continuity</h3></div><span class="astraea-status-pill success">OPERATIONAL</span></div><div class="card-body"><p class="card-desc">Autonomous recovery gate armed; storage verified.</p><ul class="astraea-spec-list"><li><strong>Recovery Gate</strong><span>Phase D</span></li><li><strong>Archive Format</strong><span>AVB + SHA-256</span></li><li><strong>Rollback</strong><span>Auto-Revert</span></li></ul></div></article>
+            </div>
+        </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>

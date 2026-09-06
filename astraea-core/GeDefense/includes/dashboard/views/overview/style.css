@@ -1,0 +1,876 @@
+/* =========================================================================
+   VGT COMMAND CENTER COCKPIT MASTER STYLESHEET (DIAMANT VGT SUPREME)
+   Status: PLATIN VGT STATUS (Animated Futuristic Mission Control Cockpit)
+   ========================================================================= */
+
+/* MANDATORY STRICT SVG RESIZING FOR ICONS ONLY (NEVER SQUASH CHARTS/RADAR/GAUGES) */
+.vgt-command-center .vgt-icon,
+.vis-cyber-card .vgt-icon,
+.vis-hud-bar .vgt-icon {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
+    stroke: currentColor !important;
+    fill: none !important;
+    stroke-width: 2 !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    flex-shrink: 0 !important;
+}
+
+.vis-overview-container.vgt-command-center {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #e2e8f0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+/* FUTURISTIC HUD VITAL BAR */
+.vis-hud-bar {
+    background: rgba(10, 15, 25, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.55), 0 0 20px rgba(0, 242, 255, 0.1);
+    border-left: 4px solid #00f2ff;
+    box-sizing: border-box;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.vis-hud-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.08), transparent);
+    animation: hud-scan-sweep 6s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes hud-scan-sweep {
+    0% { left: -100%; }
+    50%, 100% { left: 200%; }
+}
+
+.vis-hud-title {
+    font-family: 'Orbitron', -apple-system, sans-serif;
+    font-size: 14.5px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.vis-hud-grid {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vis-hud-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+}
+
+.vis-hud-label {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.vis-hud-value {
+    font-family: 'Fira Code', ui-monospace, monospace;
+    font-weight: 800;
+    color: #fff;
+}
+
+.vis-hud-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.vis-hud-dot.pulse {
+    animation: hud-glow-pulse 1.5s infinite;
+}
+
+@keyframes hud-glow-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.8); }
+    70% { box-shadow: 0 0 0 8px rgba(0, 242, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0); }
+}
+
+/* TWO COLUMN COCKPIT LAYOUT */
+.vis-overview-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 8fr) minmax(320px, 4fr);
+    gap: 24px;
+    align-items: start;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.vis-main-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.vis-sidebar-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* PREMIUM CYBER CARD */
+.vis-cyber-card {
+    background: rgba(10, 16, 28, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 22px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.vis-cyber-card:hover {
+    border-color: rgba(0, 242, 255, 0.25);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), 0 0 15px rgba(0, 242, 255, 0.08);
+}
+
+.vis-cyber-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 14px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.vis-cyber-card-header h3 {
+    margin: 0;
+    font-family: 'Orbitron', -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vis-badge {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.vis-badge-info {
+    background: rgba(0, 242, 255, 0.15);
+    color: #00f2ff;
+    border: 1px solid rgba(0, 242, 255, 0.35);
+}
+
+.vis-badge-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* SCORE PANEL & CIRCULAR GAUGE */
+.vgt-score-panel {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vgt-score-gauge-box {
+    flex-shrink: 0;
+}
+
+.vgt-gauge-circle-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vgt-gauge-circle-container svg.vgt-gauge-svg {
+    width: 140px !important;
+    height: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    min-height: 140px !important;
+    max-height: 140px !important;
+    display: block !important;
+    transform: rotate(-90deg);
+}
+
+.vgt-gauge-circle-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 10;
+}
+
+.vgt-gauge-circle-val {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+.vgt-gauge-number {
+    position: absolute;
+    font-family: 'Orbitron', monospace;
+    font-size: 30px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+.vgt-score-detail-box {
+    flex: 1;
+    min-width: 240px;
+}
+
+.vgt-score-header {
+    margin-bottom: 14px;
+}
+
+.vgt-score-status-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.vgt-score-sub-desc {
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.5;
+}
+
+.vgt-matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+.vgt-matrix-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.vgt-matrix-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(0, 242, 255, 0.3);
+}
+
+.vgt-matrix-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.vgt-matrix-status {
+    font-size: 9.5px;
+    font-family: 'Fira Code', monospace;
+    font-weight: 700;
+}
+
+.vgt-matrix-action {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #00f2ff;
+    text-decoration: none;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(0, 242, 255, 0.1);
+    border: 1px solid rgba(0, 242, 255, 0.25);
+    transition: all 0.2s ease;
+}
+
+.vgt-matrix-action:hover {
+    background: rgba(0, 242, 255, 0.25);
+    box-shadow: 0 0 8px rgba(0, 242, 255, 0.3);
+}
+
+/* DATA TABLES & SCROLL WRAPPERS */
+.vis-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+}
+
+.vis-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.vis-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vis-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+.vis-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* =========================================================================
+   ANIMATED CYBER THREAT RADAR DISPLAY
+   ========================================================================= */
+.vis-card-radar {
+    border-top: 3px solid #00f2ff;
+    background: radial-gradient(circle at 50% 40%, rgba(14, 30, 50, 0.9) 0%, rgba(6, 12, 22, 0.95) 100%);
+}
+
+.vis-radar-container {
+    position: relative;
+    width: 190px;
+    height: 190px;
+    margin: 14px auto;
+    border-radius: 50%;
+    background: rgba(0, 242, 255, 0.03);
+    box-shadow: 0 0 30px rgba(0, 242, 255, 0.15), inset 0 0 30px rgba(0, 242, 255, 0.08);
+    border: 1.5px solid rgba(0, 242, 255, 0.4);
+    overflow: hidden;
+}
+
+.vis-radar-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px dashed rgba(0, 242, 255, 0.25);
+}
+
+.vis-radar-ring.ring-30 { width: 34%; height: 34%; }
+.vis-radar-ring.ring-60 { width: 68%; height: 68%; }
+.vis-radar-ring.ring-90 { width: 94%; height: 94%; }
+
+.vis-radar-axis-h {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 242, 255, 0.2);
+}
+
+.vis-radar-axis-v {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(0, 242, 255, 0.2);
+}
+
+.vis-radar-sweep {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 300deg, rgba(0, 242, 255, 0.45) 360deg);
+    animation: vis-radar-sweep 3.6s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes vis-radar-sweep {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.vis-radar-blip {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px currentColor;
+    animation: vis-radar-blip 3s ease-in-out infinite;
+}
+
+.vis-radar-blip.blip-1 { top: 28%; left: 70%; color: #10b981; background: #10b981; animation-delay: 0.6s; }
+.vis-radar-blip.blip-2 { top: 68%; left: 32%; color: #00f2ff; background: #00f2ff; animation-delay: 1.8s; }
+.vis-radar-blip.blip-3 { top: 22%; left: 24%; color: #bc13fe; background: #bc13fe; animation-delay: 1.2s; }
+
+@keyframes vis-radar-blip {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.4); }
+}
+
+.vis-radar-telemetry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(5, 12, 22, 0.85);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 242, 255, 0.18);
+    font-family: 'Fira Code', ui-monospace, monospace;
+    font-size: 10.5px;
+    color: #7dd3fc;
+}
+
+/* SIDEBAR HERO PULSE CORE */
+.vis-hero-graph {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.vis-pulse-container {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vis-pulse-core {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #00ffaa;
+    box-shadow: 0 0 24px rgba(0, 255, 170, 0.8);
+    z-index: 2;
+    animation: pulse-core 2s infinite alternate;
+}
+
+.vis-pulse-ring {
+    position: absolute;
+    border: 2px solid #00ffaa;
+    border-radius: 50%;
+    animation: ring-pulse 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.vis-pulse-ring.ring-1 { width: 60px; height: 60px; }
+.vis-pulse-ring.ring-2 { width: 90px; height: 90px; animation-delay: 0.8s; }
+
+@keyframes pulse-core {
+    0% { transform: scale(0.9); box-shadow: 0 0 16px #00ffaa; }
+    100% { transform: scale(1.15); box-shadow: 0 0 32px #00ffaa, 0 0 50px rgba(0, 255, 170, 0.6); }
+}
+
+@keyframes ring-pulse {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(1.3); opacity: 0; }
+}
+
+.vis-hero-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-group {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 800;
+    color: #00ffaa;
+    display: block;
+}
+
+.stat-label {
+    font-size: 9.5px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.vis-integrity-sidebar-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vis-integrity-circle-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid currentColor;
+}
+
+.vis-btn-sidebar-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(0, 242, 255, 0.12);
+    border: 1px solid rgba(0, 242, 255, 0.35);
+    color: #00f2ff;
+    font-weight: 700;
+    font-size: 11px;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.vis-btn-sidebar-action:hover {
+    background: rgba(0, 242, 255, 0.25);
+    box-shadow: 0 0 16px rgba(0, 242, 255, 0.35);
+    color: #fff;
+}
+
+.vis-btn-sidebar-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+}
+
+.vis-value-box {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.value-amount {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.value-text {
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+.vis-feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vis-feature-list li {
+    font-size: 11px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* =========================================================================
+   ORACLE INTELLIGENCE AUDIT FEED (FIXED ACCORDION & HIGH-CONTRAST CARDS)
+   ========================================================================= */
+.vgt-oracle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(94, 234, 212, 0.3) rgba(3, 8, 16, 0.5);
+}
+
+.vgt-oracle-list::-webkit-scrollbar {
+    width: 6px;
+}
+.vgt-oracle-list::-webkit-scrollbar-track {
+    background: rgba(3, 8, 16, 0.5);
+    border-radius: 3px;
+}
+.vgt-oracle-list::-webkit-scrollbar-thumb {
+    background: rgba(94, 234, 212, 0.25);
+    border-radius: 3px;
+}
+.vgt-oracle-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(94, 234, 212, 0.45);
+}
+
+.vgt-oracle-event {
+    background: rgba(10, 16, 28, 0.88);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    flex-shrink: 0 !important;
+    min-height: fit-content !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.vgt-oracle-event:hover {
+    border-color: rgba(94, 234, 212, 0.4);
+}
+
+.vgt-oracle-event.is-open {
+    border-color: rgba(94, 234, 212, 0.5);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+.vgt-oracle-header {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    gap: 12px;
+    user-select: none;
+    background: rgba(13, 20, 34, 0.7);
+    transition: background 0.2s;
+}
+
+.vgt-oracle-header:hover {
+    background: rgba(20, 30, 50, 0.85);
+}
+
+.vgt-oracle-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.vgt-oracle-time {
+    font-family: 'Fira Code', ui-monospace, SFMono-Regular, monospace !important;
+    font-size: 11.5px !important;
+    color: #7dd3fc !important;
+    background: rgba(125, 211, 252, 0.1);
+    padding: 4px 8px;
+    border-radius: 5px;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+}
+
+.vgt-oracle-ip-label {
+    font-size: 12px !important;
+    font-family: 'Fira Code', ui-monospace, monospace !important;
+    color: #94a3b8 !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vgt-oracle-ip-label strong {
+    color: #cbd5e1;
+    font-weight: 700;
+}
+
+.vgt-oracle-ip-label code {
+    color: #fff;
+    font-size: 12px !important;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.vgt-oracle-verdict-label {
+    font-size: 12px !important;
+    font-family: 'Fira Code', ui-monospace, monospace !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vgt-oracle-verdict-label strong {
+    color: #cbd5e1;
+    font-weight: 700;
+}
+
+.vgt-oracle-badge {
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 5px;
+}
+
+.vgt-oracle-badge.is-block {
+    background: rgba(251, 113, 133, 0.15);
+    border: 1px solid rgba(251, 113, 133, 0.4);
+    color: #fb7185;
+    box-shadow: 0 0 10px rgba(251, 113, 133, 0.2);
+}
+
+.vgt-oracle-badge.is-safe {
+    background: rgba(94, 234, 212, 0.15);
+    border: 1px solid rgba(94, 234, 212, 0.4);
+    color: #5eead4;
+    box-shadow: 0 0 10px rgba(94, 234, 212, 0.2);
+}
+
+.vgt-accordion-icon {
+    color: #7dd3fc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease;
+}
+
+.vgt-oracle-body-wrapper {
+    display: none;
+    padding: 18px 20px;
+    background: rgba(6, 10, 18, 0.95);
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.vgt-oracle-event.is-open .vgt-oracle-body-wrapper {
+    display: block;
+}
+
+.vgt-oracle-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.vgt-oracle-reasoning {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.vgt-oracle-title {
+    font-family: 'Fira Code', ui-monospace, monospace !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.12em;
+    color: #7dd3fc;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+}
+
+.vgt-oracle-text {
+    font-size: 13px !important;
+    color: #e2e8f0 !important;
+    line-height: 1.65 !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+}
+
+.vgt-oracle-payload {
+    background: rgba(3, 7, 18, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.vgt-oracle-payload pre {
+    margin: 0;
+    padding: 14px;
+    background: #020408;
+    border: 1px solid rgba(94, 234, 212, 0.25);
+    border-radius: 6px;
+    color: #5eead4;
+    font-family: 'Fira Code', ui-monospace, monospace !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* RESPONSIVE LAYOUT BREAKPOINTS */
+@media (max-width: 960px) {
+    .vis-overview-layout {
+        grid-template-columns: 1fr;
+    }
+}

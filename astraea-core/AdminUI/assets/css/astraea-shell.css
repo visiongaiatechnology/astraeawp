@@ -1,0 +1,1396 @@
+/* STATUS: DIAMANT VGT SUPREME */
+/**
+ * AstraeaOS Glass Administration Shell Styling.
+ * Replaces WordPress Admin Bar, Left Sidebar, Submenus, Topbar Extension, and Footer.
+ */
+
+/* ==========================================================================
+   1. GLOBAL ADMIN RESETS & ROOT GLASS LAYOUT
+   ========================================================================== */
+html.astraea-loaded,
+body.astraea-glass-shell {
+    background-color: var(--astraea-bg-base) !important;
+    background-image:
+        radial-gradient(circle at 76% 4%, rgba(0, 210, 255, 0.11), transparent 31rem),
+        radial-gradient(circle at 18% 92%, rgba(91, 33, 182, 0.09), transparent 34rem),
+        linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px) !important;
+    background-size: auto, auto, 32px 32px, 32px 32px !important;
+    background-attachment: fixed !important;
+    color: var(--astraea-text-primary) !important;
+    font-family: var(--astraea-font-sans) !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Astraea Cyber-Blue Precision Scrollbars (Global Viewport & Containers) */
+html {
+    --wp-admin--admin-bar--height: var(--astraea-topbar-height, 48px) !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 210, 255, 0.4) rgba(6, 16, 32, 0.65);
+}
+
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(6, 16, 32, 0.65);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(0, 210, 255, 0.38) 0%, rgba(14, 165, 233, 0.28) 100%);
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 210, 255, 0.25);
+    box-shadow: inset 0 0 6px rgba(0, 210, 255, 0.15);
+    transition: all 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(0, 210, 255, 0.75) 0%, rgba(14, 165, 233, 0.65) 100%);
+    border-color: rgba(0, 210, 255, 0.6);
+    box-shadow: 0 0 12px rgba(0, 210, 255, 0.5), inset 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+::-webkit-scrollbar-corner {
+    background: rgba(6, 16, 32, 0.85);
+}
+
+html.wp-toolbar {
+    padding-top: var(--astraea-topbar-height, 48px) !important;
+}
+
+body.admin-bar {
+    padding-top: 0 !important;
+}
+
+#wpwrap {
+    background-color: transparent !important;
+    min-height: calc(100vh - var(--astraea-topbar-height, 48px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+}
+
+#wpcontent,
+#wpfooter {
+    background: transparent !important;
+    margin-left: var(--astraea-sidebar-width, 216px) !important;
+    box-sizing: border-box !important;
+}
+
+body:not(.folded) #wpcontent,
+body:not(.folded) #wpfooter {
+    margin-left: var(--astraea-sidebar-width, 216px) !important;
+}
+
+#wpcontent {
+    --astraea-content-gutter: clamp(16px, 1.5vw, 28px);
+    width: auto !important;
+    flex: 1 0 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 var(--astraea-content-gutter) 24px !important;
+    box-sizing: border-box !important;
+}
+
+body.folded #wpcontent,
+body.folded #wpfooter {
+    margin-left: var(--astraea-sidebar-collapsed-width, 56px) !important;
+}
+
+#wpbody {
+    flex: 1 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+#wpbody-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    float: none !important;
+    padding-bottom: 0 !important;
+}
+
+/* ==========================================================================
+   2. ASTRAEA TOP ADMIN BAR
+   ========================================================================== */
+#wpadminbar {
+    background: linear-gradient(90deg, rgba(8, 20, 38, 0.95) 0%, rgba(13, 29, 56, 0.92) 50%, rgba(8, 20, 38, 0.95) 100%) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(0, 210, 255, 0.2) !important;
+    height: 48px !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 -1px 0 rgba(0, 210, 255, 0.08) !important;
+    z-index: 99999;
+}
+
+#wpadminbar,
+#wpadminbar .ab-item,
+#wpadminbar .ab-label,
+#wpadminbar .astraea-bar-name,
+#wpadminbar .astraea-bar-badge,
+#wpadminbar .cmd-text,
+#wpadminbar .cmd-shortcut {
+    font-family: var(--astraea-font-sans) !important;
+}
+
+#wpadminbar .ab-icon,
+#wpadminbar .ab-icon:before,
+#wpadminbar .ab-item:before,
+#wpadminbar .dashicons,
+#wpadminbar .dashicons:before {
+    font-family: dashicons !important;
+}
+
+#wpadminbar #wp-toolbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    height: 48px !important;
+    padding: 0 16px !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+}
+
+#wpadminbar #wp-admin-bar-root-default {
+    position: static !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    float: none !important;
+    height: 48px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+    max-width: calc(50% - 170px) !important;
+}
+
+#wpadminbar #wp-admin-bar-root-default > li:not(#wp-admin-bar-astraea-search-trigger) {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 48px !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+}
+
+#wpadminbar #wp-admin-bar-astraea-brand {
+    order: -999 !important;
+    margin-right: 4px !important;
+    flex-shrink: 0 !important;
+}
+
+#wpadminbar #wp-admin-bar-astraea-brand > .ab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    overflow: hidden;
+    padding: 0 10px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: rgba(0, 210, 255, 0.08) !important;
+    border: 1px solid rgba(0, 210, 255, 0.22) !important;
+    transition: var(--astraea-transition-fast);
+    text-decoration: none !important;
+}
+
+#wpadminbar #wp-admin-bar-astraea-brand:hover > .ab-item {
+    background: rgba(0, 210, 255, 0.16) !important;
+    border-color: rgba(0, 210, 255, 0.45) !important;
+    box-shadow: 0 0 14px rgba(0, 210, 255, 0.25) !important;
+}
+
+/* Site Name Pill (Testseite / Home) */
+#wpadminbar #wp-admin-bar-site-name {
+    flex-shrink: 0 !important;
+    margin-right: 2px !important;
+}
+
+#wpadminbar #wp-admin-bar-site-name > .ab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 0 10px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: rgba(13, 27, 49, 0.65) !important;
+    border: 1px solid rgba(0, 210, 255, 0.18) !important;
+    color: var(--astraea-text-secondary) !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    font-weight: var(--astraea-font-weight-medium) !important;
+    transition: var(--astraea-transition-fast);
+    text-decoration: none !important;
+    white-space: nowrap !important;
+}
+
+#wpadminbar #wp-admin-bar-site-name:hover > .ab-item {
+    background: rgba(0, 210, 255, 0.14) !important;
+    border-color: rgba(0, 210, 255, 0.4) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(0, 210, 255, 0.2) !important;
+}
+
+#wpadminbar #wp-admin-bar-site-name > .ab-item:before {
+    position: static !important;
+    float: none !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 15px !important;
+    color: var(--astraea-color-primary) !important;
+}
+
+/* Updates Counter Pill */
+#wpadminbar #wp-admin-bar-updates {
+    flex-shrink: 0 !important;
+}
+
+#wpadminbar #wp-admin-bar-updates > .ab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 0 8px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: rgba(13, 27, 49, 0.65) !important;
+    border: 1px solid rgba(0, 210, 255, 0.18) !important;
+    color: var(--astraea-text-secondary) !important;
+    transition: var(--astraea-transition-fast);
+    text-decoration: none !important;
+}
+
+#wpadminbar #wp-admin-bar-updates:hover > .ab-item {
+    background: rgba(0, 210, 255, 0.14) !important;
+    border-color: rgba(0, 210, 255, 0.4) !important;
+    color: #ffffff !important;
+}
+
+#wpadminbar #wp-admin-bar-updates .ab-icon {
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+#wpadminbar #wp-admin-bar-updates .ab-icon:before {
+    top: 0 !important;
+    position: static !important;
+    float: none !important;
+    font-size: 15px !important;
+    line-height: 1 !important;
+    color: var(--astraea-color-primary) !important;
+}
+
+/* Comments Counter Pill */
+#wpadminbar #wp-admin-bar-comments {
+    flex-shrink: 0 !important;
+}
+
+#wpadminbar #wp-admin-bar-comments > .ab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 0 8px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: rgba(13, 27, 49, 0.65) !important;
+    border: 1px solid rgba(0, 210, 255, 0.18) !important;
+    color: var(--astraea-text-secondary) !important;
+    transition: var(--astraea-transition-fast);
+    text-decoration: none !important;
+}
+
+#wpadminbar #wp-admin-bar-comments:hover > .ab-item {
+    background: rgba(0, 210, 255, 0.14) !important;
+    border-color: rgba(0, 210, 255, 0.4) !important;
+    color: #ffffff !important;
+}
+
+#wpadminbar #wp-admin-bar-comments .ab-icon {
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+#wpadminbar #wp-admin-bar-comments .ab-icon:before {
+    top: 0 !important;
+    position: static !important;
+    float: none !important;
+    font-size: 15px !important;
+    line-height: 1 !important;
+    color: var(--astraea-color-primary) !important;
+}
+
+/* New Content Pill (+ Neu) */
+#wpadminbar #wp-admin-bar-new-content {
+    flex-shrink: 0 !important;
+}
+
+#wpadminbar #wp-admin-bar-new-content > .ab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 0 10px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: rgba(13, 27, 49, 0.65) !important;
+    border: 1px solid rgba(0, 210, 255, 0.18) !important;
+    color: var(--astraea-text-secondary) !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    font-weight: var(--astraea-font-weight-medium) !important;
+    transition: var(--astraea-transition-fast);
+    text-decoration: none !important;
+    white-space: nowrap !important;
+}
+
+#wpadminbar #wp-admin-bar-new-content:hover > .ab-item {
+    background: rgba(0, 210, 255, 0.14) !important;
+    border-color: rgba(0, 210, 255, 0.4) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(0, 210, 255, 0.2) !important;
+}
+
+#wpadminbar #wp-admin-bar-new-content .ab-icon {
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    width: 14px !important;
+    height: 14px !important;
+}
+
+#wpadminbar #wp-admin-bar-new-content .ab-icon:before {
+    top: 0 !important;
+    position: static !important;
+    float: none !important;
+    font-size: 15px !important;
+    line-height: 1 !important;
+    color: var(--astraea-color-primary) !important;
+}
+
+#wpadminbar #wp-admin-bar-new-content .ab-label {
+    background: transparent !important;
+    border: none !important;
+    color: inherit !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    font-weight: var(--astraea-font-weight-medium) !important;
+    line-height: 1 !important;
+    height: auto !important;
+    display: inline !important;
+}
+
+#wpadminbar .quicklinks {
+    height: 48px !important;
+    display: flex;
+    align-items: center;
+}
+
+#wpadminbar .quicklinks > ul > li > a,
+#wpadminbar .quicklinks > ul > li > .ab-item {
+    height: 32px !important;
+    line-height: 32px !important;
+    color: var(--astraea-text-secondary) !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    font-weight: var(--astraea-font-weight-medium) !important;
+    padding: 0 8px !important;
+    border-radius: 6px !important;
+    transition: var(--astraea-transition-fast);
+    background: transparent !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+}
+
+#wpadminbar .quicklinks > ul > li:hover > a,
+#wpadminbar .quicklinks > ul > li:hover > .ab-item,
+#wpadminbar .quicklinks > ul > li.hover > a {
+    color: #ffffff !important;
+    background: rgba(0, 210, 255, 0.12) !important;
+}
+
+#wpadminbar .quicklinks > ul > li > a .ab-icon,
+#wpadminbar .quicklinks > ul > li > .ab-item .ab-icon {
+    float: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+}
+
+#wpadminbar .quicklinks > ul > li > a .ab-icon:before,
+#wpadminbar .quicklinks > ul > li > .ab-item .ab-icon:before {
+    top: 0 !important;
+    line-height: 1 !important;
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+    text-align: center !important;
+    display: inline-block !important;
+}
+
+/* Brand Node */
+.astraea-bar-brand {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-height: 48px;
+    overflow: hidden;
+}
+
+#wpadminbar .astraea-bar-logo,
+.astraea-bar-brand img,
+img.astraea-bar-logo {
+    width: 20px !important;
+    height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+    object-fit: contain !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    filter: drop-shadow(0 0 6px var(--astraea-glow-primary));
+}
+
+.astraea-bar-name {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--astraea-text-primary);
+}
+
+.astraea-bar-name strong {
+    color: var(--astraea-color-primary);
+}
+
+.astraea-bar-badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: var(--astraea-radius-xs);
+    background: var(--astraea-color-primary-dim);
+    color: var(--astraea-color-primary);
+    border: 1px solid var(--astraea-border-glow);
+    line-height: 1;
+}
+
+/* Centered Command Palette Trigger Pill in Admin Bar */
+#wpadminbar #wp-admin-bar-root-default > li#wp-admin-bar-astraea-search-trigger,
+#wpadminbar li#wp-admin-bar-astraea-search-trigger,
+#wpadminbar #wp-admin-bar-astraea-search-trigger {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 1000 !important;
+    list-style: none !important;
+    float: none !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto !important;
+}
+
+#wpadminbar .astraea-search-node > .ab-item {
+    padding: 0 !important;
+    height: auto !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+.astraea-cmd-trigger {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    background: rgba(13, 27, 49, 0.75) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border: 1px solid rgba(0, 210, 255, 0.24) !important;
+    color: var(--astraea-text-secondary) !important;
+    padding: 0 14px !important;
+    border-radius: var(--astraea-radius-full) !important;
+    font-size: var(--astraea-font-size-xs) !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    box-sizing: border-box !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    height: 32px !important;
+    width: clamp(240px, 24vw, 320px) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.astraea-cmd-trigger:hover,
+.astraea-cmd-trigger:focus {
+    background: rgba(18, 38, 70, 0.9) !important;
+    border-color: rgba(0, 210, 255, 0.6) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    outline: none !important;
+}
+
+.astraea-cmd-trigger .cmd-icon {
+    flex-shrink: 0 !important;
+    color: var(--astraea-color-primary) !important;
+    opacity: 0.9 !important;
+    filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.4));
+}
+
+.astraea-cmd-trigger .cmd-text {
+    flex-grow: 1 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1 !important;
+    font-size: 12px !important;
+    color: rgba(226, 232, 240, 0.75) !important;
+}
+
+.astraea-cmd-trigger:hover .cmd-text {
+    color: #ffffff !important;
+}
+
+.astraea-cmd-trigger .cmd-shortcut {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+.astraea-cmd-trigger .cmd-shortcut kbd {
+    background: rgba(0, 210, 255, 0.12) !important;
+    border: 1px solid rgba(0, 210, 255, 0.25) !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    color: var(--astraea-color-primary) !important;
+    font-family: var(--astraea-font-mono) !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+}
+
+/* Right Section in Top Admin Bar (top-secondary) */
+#wpadminbar #wp-admin-bar-top-secondary {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    float: none !important;
+    margin-left: auto !important;
+    height: 48px !important;
+    max-width: calc(50% - 170px) !important;
+}
+
+#wpadminbar #wp-admin-bar-top-secondary > li {
+    display: flex !important;
+    align-items: center !important;
+    height: 48px !important;
+    float: none !important;
+}
+
+#wpadminbar #wp-admin-bar-top-secondary > li > .ab-item {
+    height: auto !important;
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+#wpadminbar #wp-admin-bar-astraea-hud-badge {
+    order: 10 !important;
+}
+
+#wpadminbar #wp-admin-bar-astraea-notice-drawer-trigger {
+    order: 20 !important;
+}
+
+#wpadminbar #wp-admin-bar-astraea-theme-switcher {
+    order: 30 !important;
+}
+
+#wpadminbar #wp-admin-bar-astraea-language-switcher {
+    order: 35 !important;
+    position: relative !important;
+}
+
+.astraea-lang-trigger {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 4px 9px !important;
+    border-radius: var(--astraea-radius-full, 9999px) !important;
+    background: rgba(0, 210, 255, 0.08) !important;
+    border: 1px solid rgba(0, 210, 255, 0.22) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #e2e8f0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    line-height: 1.4 !important;
+}
+
+.astraea-lang-trigger:hover {
+    background: rgba(0, 210, 255, 0.16) !important;
+    border-color: rgba(0, 210, 255, 0.45) !important;
+    color: #00d2ff !important;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.25) !important;
+}
+
+.astraea-lang-trigger .lang-flag {
+    font-size: 13px !important;
+    line-height: 1 !important;
+}
+
+.astraea-lang-trigger .lang-code {
+    letter-spacing: 0.05em !important;
+}
+
+.astraea-lang-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 12px !important;
+    width: 100% !important;
+    padding: 3px 0 !important;
+}
+
+.astraea-lang-item.is-active {
+    color: #00d2ff !important;
+    font-weight: 600 !important;
+}
+
+.astraea-lang-item .lang-check {
+    margin-left: auto !important;
+    color: #00d2ff !important;
+    font-weight: bold !important;
+}
+
+/* RTL Language Direction Adjustments */
+body.rtl.astraea-glass-shell #wpadminbar #wp-admin-bar-top-secondary {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+body.rtl.astraea-glass-shell #wpadminbar #wp-admin-bar-astraea-brand {
+    margin-right: 0 !important;
+    margin-left: 12px !important;
+}
+
+body.rtl .astraea-lang-item .lang-check {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+#wpadminbar #wp-admin-bar-my-account {
+    order: 40 !important;
+    margin-left: 4px !important;
+}
+
+/* GeDefense HUD Badge */
+.astraea-hud-badge-link {
+    text-decoration: none !important;
+    display: inline-flex !important;
+}
+
+.astraea-hud-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.12) !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    padding: 4px 10px !important;
+    border-radius: var(--astraea-radius-full) !important;
+    line-height: 1 !important;
+    transition: all 0.2s ease !important;
+}
+
+.astraea-hud-badge:hover {
+    background: rgba(16, 185, 129, 0.22) !important;
+    border-color: rgba(16, 185, 129, 0.55) !important;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.35) !important;
+}
+
+.hud-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--astraea-color-success);
+    box-shadow: 0 0 6px var(--astraea-color-success);
+    animation: astraea-pulse 2s infinite ease-in-out;
+}
+
+@keyframes astraea-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Action Icon Buttons: Theme Toggle & Notification Drawer */
+.astraea-bar-icon-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: var(--astraea-radius-sm) !important;
+    background: rgba(13, 27, 49, 0.65) !important;
+    border: 1px solid rgba(0, 210, 255, 0.2) !important;
+    color: var(--astraea-text-secondary) !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+}
+
+.astraea-bar-icon-btn:hover,
+.astraea-bar-icon-btn:focus {
+    background: rgba(0, 210, 255, 0.18) !important;
+    border-color: rgba(0, 210, 255, 0.5) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(0, 210, 255, 0.3) !important;
+    outline: none !important;
+}
+
+.astraea-bar-icon-btn svg {
+    vertical-align: middle !important;
+    display: block !important;
+    stroke: currentColor !important;
+}
+
+.astraea-bar-icon-btn .theme-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 15px !important;
+    line-height: 1 !important;
+}
+
+.astraea-notice-count-badge {
+    position: absolute !important;
+    top: -4px !important;
+    right: -4px !important;
+    background: #00d2ff !important;
+    color: #070a0f !important;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    border-radius: 9999px !important;
+    padding: 1px 5px !important;
+    line-height: 1 !important;
+    min-width: 14px !important;
+    text-align: center !important;
+    box-shadow: 0 0 8px rgba(0, 210, 255, 0.6) !important;
+}
+
+/* User Account Pill */
+#wpadminbar #wp-admin-bar-my-account > a.ab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 3px 12px 3px 6px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    background: rgba(13, 27, 49, 0.65) !important;
+    border: 1px solid rgba(0, 210, 255, 0.2) !important;
+    border-radius: var(--astraea-radius-full) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+#wpadminbar #wp-admin-bar-my-account > a.ab-item:hover {
+    background: rgba(0, 210, 255, 0.16) !important;
+    border-color: rgba(0, 210, 255, 0.5) !important;
+    box-shadow: 0 0 14px rgba(0, 210, 255, 0.25) !important;
+    color: #ffffff !important;
+}
+
+#wpadminbar #wp-admin-bar-my-account .avatar {
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 50% !important;
+    border: 1.5px solid #00d2ff !important;
+    margin: 0 !important;
+    filter: drop-shadow(0 0 4px rgba(0, 210, 255, 0.4)) !important;
+}
+
+/* Admin Bar Dropdown Submenus */
+#wpadminbar .menupop .ab-sub-wrapper {
+    background: linear-gradient(135deg, rgba(13, 30, 58, 0.96) 0%, rgba(8, 18, 36, 0.98) 100%) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    border: 1px solid rgba(0, 210, 255, 0.25) !important;
+    border-radius: var(--astraea-radius-md) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 210, 255, 0.12) !important;
+    padding: 6px !important;
+    top: 100% !important;
+}
+
+#wpadminbar .menupop li a.ab-item {
+    color: var(--astraea-text-secondary) !important;
+    border-radius: var(--astraea-radius-sm) !important;
+    padding: 6px 12px !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+}
+
+#wpadminbar .menupop li a.ab-item:hover {
+    color: #ffffff !important;
+    background: rgba(0, 210, 255, 0.14) !important;
+}
+
+/* ==========================================================================
+   3. ASTRAEA TOPBAR EXTENSION & BREADCRUMBS
+   ========================================================================== */
+#astraea-topbar-extension {
+    background: linear-gradient(90deg, rgba(8, 17, 30, 0.92), rgba(11, 23, 40, 0.72));
+    backdrop-filter: var(--astraea-blur-l1);
+    -webkit-backdrop-filter: var(--astraea-blur-l1);
+    border-bottom: 1px solid var(--astraea-border-subtle);
+    padding: 11px clamp(16px, 1.5vw, 28px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0 !important;
+    margin-left: calc(0px - var(--astraea-content-gutter));
+    margin-right: calc(0px - var(--astraea-content-gutter));
+    margin-bottom: clamp(22px, 2vw, 34px);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2);
+}
+
+.astraea-crumb-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.astraea-crumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--astraea-font-size-sm);
+}
+
+.astraea-crumb-link {
+    color: var(--astraea-text-muted);
+    text-decoration: none;
+    transition: var(--astraea-transition-fast);
+}
+
+.astraea-crumb-link:hover {
+    color: var(--astraea-color-primary);
+}
+
+.astraea-crumb-separator {
+    color: var(--astraea-text-muted);
+    opacity: 0.4;
+}
+
+.astraea-crumb-current {
+    color: var(--astraea-text-primary);
+    font-weight: var(--astraea-font-weight-semibold);
+}
+
+.astraea-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.astraea-quick-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ==========================================================================
+   4. ASTRAEA GLASS SIDEBAR NAVIGATION (VIBRANT CYBER-BLUE GLASSMORPHISM)
+   ========================================================================== */
+#adminmenumain,
+.php-error #adminmenuback,
+.php-error #adminmenuwrap {
+    margin-top: 0 !important;
+}
+
+#adminmenuback {
+    position: fixed !important;
+    top: var(--astraea-topbar-height, 48px) !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: var(--astraea-sidebar-width, 216px) !important;
+    z-index: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: linear-gradient(180deg,
+        rgba(10, 26, 52, 0.85) 0%,
+        rgba(14, 38, 76, 0.80) 45%,
+        rgba(8, 24, 52, 0.86) 85%,
+        rgba(6, 18, 38, 0.90) 100%) !important;
+    backdrop-filter: blur(24px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+    border-right: 1px solid rgba(0, 210, 255, 0.26) !important;
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.45),
+                inset -1px 0 0 rgba(0, 210, 255, 0.16),
+                inset 1px 0 0 rgba(0, 210, 255, 0.06),
+                0 0 40px rgba(0, 160, 255, 0.08) !important;
+    pointer-events: none !important;
+}
+
+#adminmenuwrap {
+    position: fixed !important;
+    top: var(--astraea-topbar-height, 48px) !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: var(--astraea-sidebar-width, 216px) !important;
+    z-index: 9990 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 210, 255, 0.4) transparent;
+}
+
+/* Dedicated Astraea Cyber-Blue Scrollbar for Sidebar Navigation */
+#adminmenuwrap::-webkit-scrollbar {
+    width: 5px;
+}
+
+#adminmenuwrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#adminmenuwrap::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(0, 210, 255, 0.35) 0%, rgba(0, 160, 255, 0.25) 100%);
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 210, 255, 0.2);
+    box-shadow: inset 0 0 4px rgba(0, 210, 255, 0.15);
+}
+
+#adminmenuwrap::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(0, 210, 255, 0.75) 0%, rgba(0, 160, 255, 0.65) 100%);
+    border-color: rgba(0, 210, 255, 0.55);
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
+}
+
+#adminmenu {
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 6px 0 48px 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+body.folded #adminmenuback,
+body.folded #adminmenuwrap,
+body.folded #adminmenu {
+    width: var(--astraea-sidebar-collapsed-width, 56px) !important;
+}
+
+#adminmenu .wp-menu-arrow {
+    display: none !important;
+}
+
+#adminmenu li.wp-menu-separator {
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent, rgba(0, 210, 255, 0.25), transparent) !important;
+    margin: 8px 14px !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+#adminmenu a.menu-top {
+    color: rgba(226, 232, 240, 0.88) !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    font-weight: var(--astraea-font-weight-medium) !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    margin: 2px 8px !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    border-left: 3px solid transparent !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+    width: calc(100% - 16px) !important;
+}
+
+#adminmenu .wp-menu-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#adminmenu .awaiting-mod,
+#adminmenu .update-plugins {
+    flex: 0 0 auto;
+}
+
+#adminmenu a.menu-top:hover,
+#adminmenu li.opensub > a.menu-top,
+#adminmenu li > a.menu-top:focus {
+    color: #ffffff !important;
+    background: rgba(0, 210, 255, 0.16) !important;
+    border-left-color: var(--astraea-color-primary) !important;
+    box-shadow: 0 0 16px rgba(0, 210, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+#adminmenu li.current > a.menu-top,
+#adminmenu li.wp-has-current-submenu > a.menu-top {
+    color: #ffffff !important;
+    background: linear-gradient(90deg, rgba(0, 210, 255, 0.28) 0%, rgba(0, 160, 255, 0.10) 100%) !important;
+    border-left-color: var(--astraea-color-primary) !important;
+    font-weight: var(--astraea-font-weight-semibold) !important;
+    box-shadow: inset 0 0 16px rgba(0, 210, 255, 0.15), 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+#adminmenu .wp-menu-image {
+    width: 28px !important;
+    height: 28px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    color: rgba(148, 163, 184, 0.75) !important;
+    transition: var(--astraea-transition-fast);
+}
+
+#adminmenu a.menu-top:hover .wp-menu-image,
+#adminmenu li.current .wp-menu-image,
+#adminmenu li.wp-has-current-submenu .wp-menu-image {
+    color: var(--astraea-color-primary) !important;
+    filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.6)) !important;
+}
+
+/* Base Submenu inside Sidebar (Inline for Active Top-Level) */
+#adminmenu .wp-has-current-submenu .wp-submenu,
+#adminmenu .wp-has-current-submenu.wp-menu-open .wp-submenu {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    display: block !important;
+    background: rgba(6, 16, 36, 0.65) !important;
+    border-left: 2px solid rgba(0, 210, 255, 0.3) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-radius: 0 0 8px 8px !important;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    padding: 4px 8px 8px 12px !important;
+    margin: 2px 8px 6px 14px !important;
+    width: auto !important;
+}
+
+#adminmenu .wp-has-current-submenu .wp-submenu .wp-submenu-head {
+    display: none !important;
+}
+
+#adminmenu .wp-has-current-submenu .wp-submenu a {
+    padding: 6px 12px !important;
+    font-size: var(--astraea-font-size-xs) !important;
+    border-radius: var(--astraea-radius-sm) !important;
+    color: rgba(203, 213, 225, 0.8) !important;
+    transition: var(--astraea-transition-fast);
+    display: block !important;
+}
+
+#adminmenu .wp-has-current-submenu .wp-submenu a:hover {
+    color: #ffffff !important;
+    background: rgba(0, 210, 255, 0.12) !important;
+}
+
+#adminmenu .wp-has-current-submenu .wp-submenu li.current a {
+    color: var(--astraea-color-primary) !important;
+    background: rgba(0, 210, 255, 0.15) !important;
+    font-weight: var(--astraea-font-weight-semibold) !important;
+    box-shadow: 0 0 12px rgba(0, 210, 255, 0.2) !important;
+}
+
+/* Glass Flyout for hover states and folded menu */
+#adminmenu:not(.folded) li.menu-top:not(.wp-has-current-submenu):hover > .wp-submenu,
+#adminmenu:not(.folded) li.opensub:not(.wp-has-current-submenu) > .wp-submenu,
+body.folded #adminmenu li.opensub > .wp-submenu,
+body.folded #adminmenu li.menu-top:hover > .wp-submenu {
+    position: fixed !important;
+    left: calc(var(--astraea-sidebar-width, 216px) + 4px) !important;
+    width: 210px !important;
+    background: linear-gradient(135deg, rgba(13, 30, 58, 0.96) 0%, rgba(8, 18, 36, 0.98) 100%) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    border: 1px solid rgba(0, 210, 255, 0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6), 0 0 24px rgba(0, 210, 255, 0.15) !important;
+    padding: 6px !important;
+    z-index: 99999 !important;
+    display: block !important;
+}
+
+body.folded #adminmenu li.opensub > .wp-submenu,
+body.folded #adminmenu li.menu-top:hover > .wp-submenu {
+    left: calc(var(--astraea-sidebar-collapsed-width, 56px) + 4px) !important;
+}
+
+body.folded #adminmenu .wp-has-current-submenu:not(.opensub) > .wp-submenu {
+    display: none !important;
+}
+
+#adminmenu li.opensub > .wp-submenu a,
+#adminmenu li.menu-top:hover > .wp-submenu a {
+    color: rgba(226, 232, 240, 0.8) !important;
+    font-size: var(--astraea-font-size-xs) !important;
+    padding: 7px 12px !important;
+    border-radius: var(--astraea-radius-sm) !important;
+    transition: var(--astraea-transition-fast);
+    display: block !important;
+}
+
+#adminmenu li.opensub > .wp-submenu a:hover,
+#adminmenu li.opensub > .wp-submenu li.current a,
+#adminmenu li.menu-top:hover > .wp-submenu a:hover {
+    color: #ffffff !important;
+    background: rgba(0, 210, 255, 0.15) !important;
+}
+
+#adminmenu .wp-submenu li.wp-submenu-head {
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid rgba(0, 210, 255, 0.18) !important;
+    margin-bottom: 4px !important;
+    letter-spacing: 0.02em;
+}
+
+/* Collapse Navigation Button */
+#collapse-menu {
+    background: transparent !important;
+    border-top: 1px solid rgba(0, 210, 255, 0.12) !important;
+}
+
+#collapse-button,
+.wp-core-ui #collapse-button {
+    background: transparent !important;
+    color: rgba(148, 163, 184, 0.7) !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    transition: var(--astraea-transition-fast);
+}
+
+#collapse-button:hover,
+#collapse-button:focus,
+.wp-core-ui #collapse-button:hover,
+.wp-core-ui #collapse-button:focus {
+    background: rgba(0, 210, 255, 0.12) !important;
+    color: var(--astraea-color-primary) !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* ==========================================================================
+   5. ASTRAEA FOOTER
+   ========================================================================== */
+#wpfooter {
+    background: var(--astraea-surface-l1) !important;
+    border-top: 1px solid var(--astraea-border-subtle) !important;
+    color: var(--astraea-text-muted) !important;
+    font-size: var(--astraea-font-size-xs) !important;
+    padding: 12px 24px !important;
+    position: relative !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    margin-top: auto !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.astraea-footer-brand strong {
+    color: var(--astraea-color-primary);
+}
+
+.vgt-accent {
+    color: var(--astraea-color-primary);
+    font-weight: var(--astraea-font-weight-semibold);
+}
+
+.astraea-system-build {
+    color: var(--astraea-text-muted);
+    font-family: var(--astraea-font-mono);
+    font-size: 11px;
+}
+
+#adminmenu li.current a.menu-top:after,
+#adminmenu li.wp-has-current-submenu a.menu-top:after {
+    display: none !important;
+}
+
+#adminmenu .awaiting-mod,
+#adminmenu .update-plugins,
+#wpadminbar #wp-admin-bar-updates .ab-label,
+#wpadminbar #wp-admin-bar-comments .ab-label {
+    background: rgba(0, 210, 255, 0.2) !important;
+    color: #00d2ff !important;
+    border: 1px solid rgba(0, 210, 255, 0.35) !important;
+    border-radius: 9999px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    padding: 1px 6px !important;
+    line-height: 1.2 !important;
+    margin-left: 2px !important;
+    display: inline-block !important;
+}
+
+/* ==========================================================================
+   6. RESPONSIVE LAYOUT CONTRACT
+   ========================================================================== */
+@media screen and (max-width: 960px) {
+    body.auto-fold #adminmenuback,
+    body.auto-fold #adminmenuwrap,
+    body.auto-fold #adminmenu {
+        width: 56px !important;
+    }
+
+    body.auto-fold #wpcontent,
+    body.auto-fold #wpfooter {
+        margin-left: 56px !important;
+    }
+
+    body.auto-fold #adminmenu li.opensub > .wp-submenu,
+    body.auto-fold #adminmenu li.menu-top:hover > .wp-submenu {
+        left: 58px !important;
+    }
+
+    #wpadminbar .cmd-text,
+    #wpadminbar .cmd-shortcut,
+    #wpadminbar .astraea-hud-node {
+        display: none !important;
+    }
+
+    #wpadminbar #wp-admin-bar-astraea-search-trigger {
+        position: static !important;
+        transform: none !important;
+    }
+
+    .astraea-cmd-trigger {
+        width: 32px !important;
+        padding: 0 !important;
+        justify-content: center !important;
+        border-radius: var(--astraea-radius-sm) !important;
+    }
+}
+
+@media screen and (max-width: 782px) {
+    html {
+        --wp-admin--admin-bar--height: 46px !important;
+        --astraea-topbar-height: 46px !important;
+    }
+
+    html.wp-toolbar {
+        padding-top: 46px !important;
+    }
+
+    #wpadminbar {
+        height: 46px !important;
+    }
+
+    #adminmenuback {
+        top: 46px !important;
+    }
+
+    .sticky-menu #adminmenuwrap {
+        top: 46px !important;
+    }
+
+    #wpcontent,
+    #wpfooter,
+    body.folded #wpcontent,
+    body.folded #wpfooter,
+    body.auto-fold #wpcontent,
+    body.auto-fold #wpfooter {
+        margin-left: 0 !important;
+    }
+
+    #wpcontent {
+        padding-right: 10px;
+    }
+
+    #astraea-topbar-extension {
+        align-items: flex-start;
+        gap: 12px;
+        margin-left: -10px;
+        margin-right: -10px;
+        padding: 12px 14px;
+    }
+
+    .astraea-crumb-list {
+        flex-wrap: wrap;
+    }
+
+    #wpadminbar .astraea-bar-badge,
+    #wpadminbar .astraea-search-node,
+    #wpadminbar .astraea-theme-node {
+        display: none !important;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    html.wp-toolbar {
+        padding-top: 0 !important;
+    }
+
+    #wpcontent {
+        padding-top: 46px;
+    }
+
+    #astraea-topbar-extension {
+        margin-top: 0 !important;
+    }
+
+    #wpbody {
+        padding-top: 0 !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    #wpadminbar .astraea-bar-name,
+    .astraea-header-actions {
+        display: none !important;
+    }
+
+    #wpadminbar .quicklinks > ul > li > a,
+    #wpadminbar .quicklinks > ul > li > .ab-item {
+        padding: 0 8px !important;
+    }
+}

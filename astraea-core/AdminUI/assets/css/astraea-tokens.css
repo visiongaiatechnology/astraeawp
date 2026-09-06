@@ -1,0 +1,285 @@
+/**
+ * AstraeaOS WP — Design Tokens & Dynamic Token Engine
+ * STATUS: DIAMANT VGT SUPREME
+ * Version: 2.1
+ */
+
+:root {
+    /* Spacing System */
+    --ast-space-1: 4px;
+    --ast-space-2: 8px;
+    --ast-space-3: 12px;
+    --ast-space-4: 16px;
+    --ast-space-5: 20px;
+    --ast-space-6: 24px;
+    --ast-space-8: 32px;
+    --ast-space-10: 40px;
+    --ast-space-12: 48px;
+    --ast-space-16: 64px;
+
+    /* Spacing Aliases */
+    --astraea-space-1: var(--ast-space-1);
+    --astraea-space-2: var(--ast-space-2);
+    --astraea-space-3: var(--ast-space-3);
+    --astraea-space-4: var(--ast-space-4);
+    --astraea-space-5: var(--ast-space-5);
+    --astraea-space-6: var(--ast-space-6);
+    --astraea-space-8: var(--ast-space-8);
+    --astraea-space-10: var(--ast-space-10);
+    --astraea-space-12: var(--ast-space-12);
+    --astraea-space-16: var(--ast-space-16);
+
+    /* Radius System */
+    --ast-radius-xs: 4px;
+    --ast-radius-sm: 8px;
+    --ast-radius-md: 12px;
+    --ast-radius-lg: 16px;
+    --ast-radius-xl: 24px;
+    --ast-radius-full: 9999px;
+
+    /* Radius Aliases */
+    --astraea-radius-xs: var(--ast-radius-xs);
+    --astraea-radius-sm: var(--ast-radius-sm);
+    --astraea-radius-md: var(--ast-radius-md);
+    --astraea-radius-lg: var(--ast-radius-lg);
+    --astraea-radius-xl: var(--ast-radius-xl);
+    --astraea-radius-full: var(--ast-radius-full);
+
+    /* Typography & Hierarchy */
+    --ast-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --ast-font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --astraea-font-sans: var(--ast-font-sans);
+    --astraea-font-mono: var(--ast-font-mono);
+
+    --astraea-font-size-xs: 11px;
+    --astraea-font-size-sm: 13px;
+    --astraea-font-size-base: 14px;
+    --astraea-font-size-lg: 16px;
+    --astraea-font-size-xl: 20px;
+    --astraea-font-size-2xl: 24px;
+
+    --astraea-font-weight-regular: 400;
+    --astraea-font-weight-medium: 500;
+    --astraea-font-weight-semibold: 600;
+    --astraea-font-weight-bold: 700;
+
+    /* Motion System */
+    --ast-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+    --ast-transition-fast: 150ms var(--ast-ease-spring);
+    --ast-transition-normal: 220ms var(--ast-ease-spring);
+    --ast-transition-slow: 320ms var(--ast-ease-spring);
+
+    --astraea-ease-spring: var(--ast-ease-spring);
+    --astraea-transition-fast: var(--ast-transition-fast);
+    --astraea-transition-normal: var(--ast-transition-normal);
+    --astraea-transition-slow: var(--ast-transition-slow);
+
+    /* Dimensions */
+    --ast-sidebar-width: 216px;
+    --ast-sidebar-collapsed-width: 56px;
+    --ast-topbar-height: 48px;
+
+    --astraea-sidebar-width: var(--ast-sidebar-width);
+    --astraea-topbar-height: var(--ast-topbar-height);
+}
+
+/* ==========================================================================
+   Dark Theme (Astraea Obsidian Deep Cyan — Default)
+   ========================================================================== */
+:root,
+[data-theme="dark"],
+.astraea-theme-dark {
+    --ast-bg-app: #070a0f;
+    --ast-bg-radial-1: radial-gradient(circle at 15% 15%, rgba(0, 210, 255, 0.08) 0%, transparent 40%);
+    --ast-bg-radial-2: radial-gradient(circle at 85% 85%, rgba(14, 165, 233, 0.06) 0%, transparent 45%);
+
+    --ast-surface-base: rgba(11, 16, 26, 0.75);
+    --ast-surface-glass-l1: rgba(14, 21, 35, 0.60);
+    --ast-surface-glass-l2: rgba(18, 28, 48, 0.75);
+    --ast-surface-glass-l3: rgba(23, 36, 62, 0.88);
+    --ast-surface-elevated: rgba(26, 41, 71, 0.95);
+
+    --ast-surface-hover: rgba(0, 210, 255, 0.09);
+    --ast-surface-active: rgba(0, 210, 255, 0.16);
+
+    --ast-border-subtle: rgba(255, 255, 255, 0.07);
+    --ast-border-glass: rgba(0, 210, 255, 0.20);
+    --ast-border-strong: rgba(0, 210, 255, 0.38);
+    --ast-border-specular: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+
+    --ast-text-primary: #f8fafc;
+    --ast-text-secondary: #94a3b8;
+    --ast-text-muted: #64748b;
+    --ast-text-inverse: #070a0f;
+
+    --ast-accent-primary: #00d2ff;
+    --ast-accent-hover: #38bdf8;
+    --ast-accent-muted: rgba(0, 210, 255, 0.15);
+    --ast-accent-glow: 0 0 24px rgba(0, 210, 255, 0.32);
+
+    --ast-success: #10b981;
+    --ast-success-bg: rgba(16, 185, 129, 0.12);
+    --ast-warning: #f59e0b;
+    --ast-warning-bg: rgba(245, 158, 11, 0.12);
+    --ast-danger: #ef4444;
+    --ast-danger-bg: rgba(239, 68, 68, 0.12);
+    --ast-info: #00d2ff;
+    --ast-info-bg: rgba(0, 210, 255, 0.12);
+
+    --ast-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+    --ast-shadow-elevated: 0 20px 48px 0 rgba(0, 0, 0, 0.65);
+
+    --ast-blur-l1: 12px;
+    --ast-blur-l2: 20px;
+    --ast-blur-l3: 32px;
+
+    /* Astraea Aliases */
+    --astraea-bg-base: var(--ast-bg-app);
+    --astraea-bg-secondary: #0b0f17;
+    --astraea-bg-tertiary: #111827;
+
+    --astraea-surface-l1: var(--ast-surface-glass-l1);
+    --astraea-surface-l2: var(--ast-surface-glass-l2);
+    --astraea-surface-l3: var(--ast-surface-glass-l3);
+    --astraea-surface-hover: var(--ast-surface-hover);
+    --astraea-surface-active: var(--ast-surface-active);
+
+    --astraea-border-subtle: var(--ast-border-subtle);
+    --astraea-border-glow: var(--ast-border-glass);
+    --astraea-border-bright: var(--ast-border-strong);
+
+    --astraea-text-primary: var(--ast-text-primary);
+    --astraea-text-secondary: var(--ast-text-secondary);
+    --astraea-text-muted: var(--ast-text-muted);
+    --astraea-text-inverse: var(--ast-text-inverse);
+
+    --astraea-color-primary: var(--ast-accent-primary);
+    --astraea-color-primary-hover: var(--ast-accent-hover);
+    --astraea-color-primary-dim: var(--ast-accent-muted);
+    --astraea-glow-primary: rgba(0, 210, 255, 0.4);
+
+    --astraea-color-success: var(--ast-success);
+    --astraea-color-warning: var(--ast-warning);
+    --astraea-color-danger: var(--ast-danger);
+    --astraea-color-info: var(--ast-info);
+
+    --astraea-blur-l1: blur(var(--ast-blur-l1));
+    --astraea-blur-l2: blur(var(--ast-blur-l2));
+    --astraea-blur-l3: blur(var(--ast-blur-l3));
+
+    --astraea-shadow-card: var(--ast-shadow-glass);
+    --astraea-shadow-modal: var(--ast-shadow-elevated);
+}
+
+/* ==========================================================================
+   Light Theme (Astraea Crisp Titanium Cyan)
+   ========================================================================== */
+[data-theme="light"],
+.astraea-theme-light {
+    --ast-bg-app: #f1f5f9;
+    --ast-bg-radial-1: radial-gradient(circle at 15% 15%, rgba(0, 180, 230, 0.08) 0%, transparent 40%);
+    --ast-bg-radial-2: radial-gradient(circle at 85% 85%, rgba(2, 132, 199, 0.05) 0%, transparent 45%);
+
+    --ast-surface-base: rgba(255, 255, 255, 0.85);
+    --ast-surface-glass-l1: rgba(255, 255, 255, 0.65);
+    --ast-surface-glass-l2: rgba(255, 255, 255, 0.82);
+    --ast-surface-glass-l3: rgba(255, 255, 255, 0.94);
+    --ast-surface-elevated: #ffffff;
+
+    --ast-surface-hover: rgba(2, 132, 199, 0.06);
+    --ast-surface-active: rgba(2, 132, 199, 0.12);
+
+    --ast-border-subtle: rgba(15, 23, 42, 0.08);
+    --ast-border-glass: rgba(2, 132, 199, 0.22);
+    --ast-border-strong: rgba(2, 132, 199, 0.42);
+    --ast-border-specular: inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+
+    --ast-text-primary: #0f172a;
+    --ast-text-secondary: #475569;
+    --ast-text-muted: #94a3b8;
+    --ast-text-inverse: #ffffff;
+
+    --ast-accent-primary: #0284c7;
+    --ast-accent-hover: #0369a1;
+    --ast-accent-muted: rgba(2, 132, 199, 0.12);
+    --ast-accent-glow: 0 0 20px rgba(2, 132, 199, 0.25);
+
+    --ast-success: #059669;
+    --ast-success-bg: rgba(5, 150, 105, 0.12);
+    --ast-warning: #d97706;
+    --ast-warning-bg: rgba(217, 119, 6, 0.12);
+    --ast-danger: #dc2626;
+    --ast-danger-bg: rgba(220, 38, 38, 0.12);
+    --ast-info: #0284c7;
+    --ast-info-bg: rgba(2, 132, 199, 0.12);
+
+    --ast-shadow-glass: 0 8px 32px 0 rgba(15, 23, 42, 0.08);
+    --ast-shadow-elevated: 0 20px 48px 0 rgba(15, 23, 42, 0.14);
+
+    --ast-blur-l1: 10px;
+    --ast-blur-l2: 18px;
+    --ast-blur-l3: 28px;
+
+    /* Astraea Aliases */
+    --astraea-bg-base: var(--ast-bg-app);
+    --astraea-bg-secondary: #ffffff;
+    --astraea-bg-tertiary: #f8fafc;
+
+    --astraea-surface-l1: var(--ast-surface-glass-l1);
+    --astraea-surface-l2: var(--ast-surface-glass-l2);
+    --astraea-surface-l3: var(--ast-surface-glass-l3);
+    --astraea-surface-hover: var(--ast-surface-hover);
+    --astraea-surface-active: var(--ast-surface-active);
+
+    --astraea-border-subtle: var(--ast-border-subtle);
+    --astraea-border-glow: var(--ast-border-glass);
+    --astraea-border-bright: var(--ast-border-strong);
+
+    --astraea-text-primary: var(--ast-text-primary);
+    --astraea-text-secondary: var(--ast-text-secondary);
+    --astraea-text-muted: var(--ast-text-muted);
+    --astraea-text-inverse: var(--ast-text-inverse);
+
+    --astraea-color-primary: var(--ast-accent-primary);
+    --astraea-color-primary-hover: var(--ast-accent-hover);
+    --astraea-color-primary-dim: var(--ast-accent-muted);
+    --astraea-glow-primary: rgba(2, 132, 199, 0.35);
+
+    --astraea-color-success: var(--ast-success);
+    --astraea-color-warning: var(--ast-warning);
+    --astraea-color-danger: var(--ast-danger);
+    --astraea-color-info: var(--ast-info);
+
+    --astraea-blur-l1: blur(var(--ast-blur-l1));
+    --astraea-blur-l2: blur(var(--ast-blur-l2));
+    --astraea-blur-l3: blur(var(--ast-blur-l3));
+
+    --astraea-shadow-card: var(--ast-shadow-glass);
+    --astraea-shadow-modal: var(--ast-shadow-elevated);
+}
+
+/* ==========================================================================
+   Reduced Motion Override
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    :root,
+    [data-theme="dark"],
+    [data-theme="light"],
+    .astraea-theme-dark,
+    .astraea-theme-light {
+        --ast-transition-fast: 0ms !important;
+        --ast-transition-normal: 0ms !important;
+        --ast-transition-slow: 0ms !important;
+        --astraea-transition-fast: 0ms !important;
+        --astraea-transition-normal: 0ms !important;
+        --astraea-transition-slow: 0ms !important;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}

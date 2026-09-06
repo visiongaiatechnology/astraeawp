@@ -1,0 +1,59 @@
+/* STATUS: DIAMANT VGT SUPREME */
+/**
+ * AstraeaOS Block Editor (Gutenberg) Harmonization.
+ * Non-destructive glass accents for Gutenberg toolbar and inspector panels.
+ */
+
+/* Top Editor Header Toolbar */
+/* Only editor chrome is themed; the document canvas represents published content. */
+body.astraea-glass-shell :is(.editor-sidebar, .edit-post-sidebar, .editor-header, .edit-post-header, .interface-interface-skeleton__sidebar, .interface-complementary-area, .components-popover__content, .components-modal__content) {
+    background: var(--ast-surface-elevated) !important;
+    color: var(--ast-text-primary) !important;
+    border-color: var(--ast-border-subtle) !important;
+}
+body.astraea-glass-shell :is(.editor-sidebar, .edit-post-sidebar, .interface-complementary-area, .components-popover__content, .components-modal__content) :is(.components-panel, .components-panel__body, .components-panel__body-title, .components-panel__body-toggle) {
+    background: transparent !important;
+    color: var(--ast-text-primary) !important;
+    border-color: var(--ast-border-subtle) !important;
+}
+body.astraea-glass-shell :is(.editor-sidebar, .edit-post-sidebar, .editor-header, .components-popover__content, .components-modal__content) :is(label, p, h2, h3, .components-button:not(.is-primary):not(.is-destructive)) {
+    color: var(--ast-text-primary) !important;
+}
+.edit-post-header,
+.editor-header {
+    background: var(--astraea-surface-l2) !important;
+    backdrop-filter: var(--astraea-blur-l2) !important;
+    -webkit-backdrop-filter: var(--astraea-blur-l2) !important;
+    border-bottom: 1px solid var(--astraea-border-subtle) !important;
+}
+
+/* Sidebar Inspector */
+.edit-post-sidebar,
+.editor-sidebar {
+    background: var(--astraea-surface-l2) !important;
+    backdrop-filter: var(--astraea-blur-l2) !important;
+    -webkit-backdrop-filter: var(--astraea-blur-l2) !important;
+    border-left: 1px solid var(--astraea-border-subtle) !important;
+}
+
+.components-panel__header {
+    background: var(--astraea-surface-l1) !important;
+    border-bottom: 1px solid var(--astraea-border-subtle) !important;
+}
+
+/* Primary Publish / Update Button in Editor */
+.editor-post-publish-button__button,
+.editor-post-publish-panel__toggle.is-primary {
+    background: linear-gradient(135deg, var(--astraea-color-primary) 0%, #0284c7 100%) !important;
+    color: #030712 !important;
+    border: 1px solid rgba(0, 210, 255, 0.4) !important;
+    box-shadow: 0 2px 10px rgba(0, 210, 255, 0.25) !important;
+    font-weight: 600 !important;
+}
+
+.editor-post-publish-button__button:hover,
+.editor-post-publish-panel__toggle.is-primary:hover {
+    background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%) !important;
+    box-shadow: 0 0 16px var(--astraea-glow-primary) !important;
+    color: #000 !important;
+}

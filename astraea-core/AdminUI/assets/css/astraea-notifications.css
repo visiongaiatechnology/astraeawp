@@ -1,0 +1,185 @@
+/* STATUS: DIAMANT VGT SUPREME */
+/**
+ * AstraeaOS Notification Center & Notice Styling.
+ * Slide-out Glass Drawer and modern glass notice cards.
+ */
+
+/* ==========================================================================
+   1. SLIDE-OUT NOTIFICATION DRAWER
+   ========================================================================== */
+.astraea-notification-drawer {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 380px;
+    height: 100vh;
+    background: var(--astraea-surface-l3);
+    backdrop-filter: var(--astraea-blur-l3);
+    -webkit-backdrop-filter: var(--astraea-blur-l3);
+    border-left: 1px solid var(--astraea-border-subtle);
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+    z-index: 100002;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.astraea-notification-drawer.is-open {
+    right: 0;
+}
+
+.astraea-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 100001;
+    display: none;
+}
+
+.astraea-drawer-backdrop.is-open {
+    display: block;
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--astraea-border-subtle);
+}
+
+.drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drawer-title h3 {
+    margin: 0 !important;
+    font-size: var(--astraea-font-size-base);
+    font-weight: 600;
+    color: var(--astraea-text-primary);
+}
+
+.drawer-close {
+    background: transparent;
+    border: none;
+    color: var(--astraea-text-muted);
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    transition: var(--astraea-transition-fast);
+}
+
+.drawer-close:hover {
+    color: var(--astraea-text-primary);
+}
+
+.drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.drawer-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--astraea-text-muted);
+}
+
+.drawer-empty-state .empty-icon {
+    font-size: 32px;
+    color: var(--astraea-color-success);
+    margin-bottom: 12px;
+}
+
+/* ==========================================================================
+   2. IN-PAGE NOTICES MODERNIZATION
+   ========================================================================== */
+div.notice,
+.notice,
+.wrap > .notice,
+.wrap > div.updated,
+.wrap > div.error,
+#wpbody-content > .notice,
+.astraea-notices-container .notice,
+.update-nag {
+    background: var(--astraea-surface-l1) !important;
+    backdrop-filter: var(--astraea-blur-l1) !important;
+    -webkit-backdrop-filter: var(--astraea-blur-l1) !important;
+    border: 1px solid var(--astraea-border-subtle) !important;
+    border-radius: var(--astraea-radius-sm) !important;
+    box-shadow: var(--astraea-shadow-card) !important;
+    color: var(--astraea-text-primary) !important;
+    padding: 12px 18px !important;
+    margin: 16px 0 !important;
+    position: relative;
+    border-left-width: 4px !important;
+}
+
+div.notice .button,
+div.notice a.button,
+.notice .button,
+.notice a.button {
+    background: var(--astraea-surface-l2) !important;
+    color: var(--astraea-text-primary) !important;
+    border: 1px solid var(--astraea-border-strong) !important;
+    border-radius: var(--astraea-radius-sm) !important;
+    box-shadow: none !important;
+}
+
+div.notice .button:hover,
+div.notice a.button:hover,
+.notice .button:hover,
+.notice a.button:hover {
+    background: var(--astraea-surface-hover) !important;
+    border-color: var(--astraea-color-primary) !important;
+}
+
+.notice p {
+    margin: 0 !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    line-height: 1.5 !important;
+}
+
+.notice-success,
+div.updated {
+    border-left-color: var(--astraea-color-success) !important;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.08) !important;
+}
+
+.notice-info {
+    border-left-color: var(--astraea-color-primary) !important;
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.08) !important;
+}
+
+.notice-warning {
+    border-left-color: var(--astraea-color-warning) !important;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.08) !important;
+}
+
+.notice-error,
+div.error {
+    border-left-color: var(--astraea-color-danger) !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.08) !important;
+}
+
+.notice-dismiss {
+    color: var(--astraea-text-muted) !important;
+    transition: var(--astraea-transition-fast) !important;
+}
+
+.notice-dismiss:hover::before {
+    color: var(--astraea-color-danger) !important;
+}

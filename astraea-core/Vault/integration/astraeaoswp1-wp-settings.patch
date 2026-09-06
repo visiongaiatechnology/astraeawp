@@ -1,0 +1,17 @@
+--- a/wp-settings.php
++++ b/wp-settings.php
+@@ -507,6 +507,14 @@
+  */
+ $GLOBALS['wp_plugin_paths'] = array();
+ 
++// AstraeaOS WP: Vault autonomous recovery gate.
++// DB/options/multisite are ready here, but no MU/network/normal plugin has loaded yet.
++$astraea_vault_early = WP_PLUGIN_DIR . '/astraea-vault/integration/astraea-core-early-bootstrap.php';
++if ( is_file( $astraea_vault_early ) ) {
++	require_once $astraea_vault_early;
++}
++unset( $astraea_vault_early );
++
+ // Load must-use plugins.
+ foreach ( wp_get_mu_plugins() as $mu_plugin ) {
+ 	$_wp_plugin_file = $mu_plugin;

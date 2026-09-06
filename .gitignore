@@ -1,0 +1,30 @@
+# Local environment shims & temporary files
+powershell.cmd
+.DS_Store
+Thumbs.db
+*.tmp
+*.zip
+*.rar
+BUILD-MANIFEST.json
+
+# Runtime state must never enter a source or release artifact.
+wp-content/uploads/
+wp-content/vgt-vault/
+astraea-core/GeDefense/vault-storage/
+
+# GeDefense was imported with flattened Git internals. Keep them out of builds.
+astraea-core/GeDefense/objects/
+astraea-core/GeDefense/refs/
+astraea-core/GeDefense/hooks/
+astraea-core/GeDefense/info/
+astraea-core/GeDefense/logs/
+astraea-core/GeDefense/COMMIT_EDITMSG
+astraea-core/GeDefense/FETCH_HEAD
+astraea-core/GeDefense/HEAD
+astraea-core/GeDefense/ORIG_HEAD
+astraea-core/GeDefense/config
+astraea-core/GeDefense/description
+astraea-core/GeDefense/index
+
+powershell.exe
+

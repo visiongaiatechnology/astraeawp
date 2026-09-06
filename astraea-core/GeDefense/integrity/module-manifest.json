@@ -1,0 +1,115 @@
+{
+    "schema": 2,
+    "algorithm": "sha256",
+    "trust": "entrypoint-pinned",
+    "components": {
+        "root": {
+            "files": 3,
+            "root_hash": "92fda161777fb271c69dea7da903532977c2aeb40fb0419af55671e446a683c6"
+        },
+        "assets": {
+            "files": 12,
+            "root_hash": "1a7de6eb2291703b3bb79a25689ea852dfcc2d1307fea43387c659f6072135d4"
+        },
+        "compatibility": {
+            "files": 4,
+            "root_hash": "178ff34fc8b19b5617b1fad47671e0308a613b8c94566ebcda40b13f751130b9"
+        },
+        "core": {
+            "files": 14,
+            "root_hash": "6ba7061718dde6932ca92a17bcc02fe54d8b414e7dbf4e2eb3a40a7dd76305a6"
+        },
+        "dashboard": {
+            "files": 85,
+            "root_hash": "52ef20028329ea6fa0de540680c3bb73c7462d526519253db3564ad588c277b5"
+        },
+        "xdr": {
+            "files": 9,
+            "root_hash": "8b27f073a2c84339269fbe99a273841f016236556bd2070a147c4367ee84abc5"
+        },
+        "scanner": {
+            "files": 13,
+            "root_hash": "92dbffb48f6af9afe8bac5fd7c1cd2572f9516da597249b02cf98ab69da4b9c6"
+        },
+        "aegis": {
+            "files": 2,
+            "root_hash": "480bba7dfbf82da92df67d4ad7133972df84bd43c40744bfe026e9de62db68dd"
+        },
+        "airlock": {
+            "files": 4,
+            "root_hash": "bd285d92447adfcb966e7f00f3ae88e13fb2e8d7a09a7f52a7b12a623031f83a"
+        },
+        "cerberus": {
+            "files": 1,
+            "root_hash": "583a473d7ef75ca621bf4e715fe9e90ea2c2a5a5bfec87713088b1b69ee0014d"
+        },
+        "chronos": {
+            "files": 5,
+            "root_hash": "21d05aeed193b2d30064267e270df4c504fa885c22a91d6ecf2155b4dff76314"
+        },
+        "downloads": {
+            "files": 1,
+            "root_hash": "633f7de2e6e77f3928bfc0bbf5b1b13db8e98faf15c3efbbf9a9e5264cedd27a"
+        },
+        "filesystem": {
+            "files": 1,
+            "root_hash": "1ae225bf0b86a4878f6775639d6776536ced944f1badb84a33c68af74e699cba"
+        },
+        "gorgon": {
+            "files": 6,
+            "root_hash": "f78123d38bfc5ec6b30be6050c8911cb7f09ce23c0790dd97097e5b8594d428a"
+        },
+        "hades": {
+            "files": 1,
+            "root_hash": "4987de7b2fa3678a569282d1925c1b85d302cc10583ee23f6c76910798d94d12"
+        },
+        "kernel": {
+            "files": 1,
+            "root_hash": "9e352c7f5e49a67b0ff53b5482f1a236f1b93fdc2eb4e1c13e2b2f562e2f5245"
+        },
+        "morpheus": {
+            "files": 10,
+            "root_hash": "e846a6cceec48e2f7bf76d24b4189e8104c71f6f09cac271b4abea8b53919bd6"
+        },
+        "nemesis": {
+            "files": 1,
+            "root_hash": "b132ab13c224ee47ada25ef956cf25823e98531147127411143fdd19c16e58eb"
+        },
+        "oracle": {
+            "files": 1,
+            "root_hash": "cd35b55efd8ffab18a3f0e2cf42255b74a854ccbddc708bc20643226a7639eb9"
+        },
+        "prometheus": {
+            "files": 1,
+            "root_hash": "97fb7b9de8f83e3af0d13ffd506a69aca4275f374eb8055f08ccc9bbcc9307fa"
+        },
+        "styx": {
+            "files": 1,
+            "root_hash": "f902fc994d51d23bec0d4c1cb0ea30dec2b4142759465921b0a5370514ecf885"
+        },
+        "titan": {
+            "files": 13,
+            "root_hash": "78a69a6dc294bcc7da20fa3a8af8e9508fc6fb01a97d6a52fa2ed862577a5292"
+        },
+        "throneguard": {
+            "files": 1,
+            "root_hash": "4d819998428b54484dabc421611a67ef7e16ce8fb33a323f97296b924072b188"
+        },
+        "loginpager": {
+            "files": 1,
+            "root_hash": "28e46e6a478d5f55dd63fca4588dcda72c4299b0f53443d2828c37e192496bfc"
+        },
+        "trap": {
+            "files": 4,
+            "root_hash": "ac1d35e9e6fd7c1b529df6857926371257e8e5dda8f964c1c762e1ba0c4c3f66"
+        },
+        "vault": {
+            "files": 1,
+            "root_hash": "b71b016876c300a21664ad05c042ed05c6cd44507524404d9649f5bee9f83aea"
+        },
+        "zeus": {
+            "files": 16,
+            "root_hash": "3efba7116b3153ac906c4e6883bbfbd4ad0aa83df47c3fd6e9b2aa99c01d680f"
+        }
+    }
+}

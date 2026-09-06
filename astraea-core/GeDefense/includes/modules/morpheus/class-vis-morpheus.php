@@ -1,0 +1,344 @@
+<?php
+/**
+ * VISIONGAIATECHNOLOGY OMEGA PROTOCOL
+ * STATUS: DIAMANT VGT SUPREME (MATHEMATICALLY HARDENED, ZERO-TRUST)
+ * MODULE: MORPHEUS - CORE ORCHESTRATOR
+ * DESCRIPTION: Main Entry Point. Verwaltet State, Matrix IO & Dependency Injection.
+ */
+
+declare(strict_types=1);
+
+namespace VisionGaia\GeDefense\Modules\Morpheus;
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit( 'VGT Protocol: Direct access denied.' );
+}
+
+require_once __DIR__ . '/src/class-morpheus-hypervisor.php';
+require_once __DIR__ . '/src/class-morpheus-path-jail.php';
+require_once __DIR__ . '/src/class-morpheus-ai.php';
+require_once __DIR__ . '/src/class-morpheus-dashboard.php';
+
+final class Morpheus {
+
+    private static ?self $instance = null;
+    
+    private array $permission_matrix = [];
+    private string $matrix_file;
+    public bool $enforcement_mode;
+
+    public static bool $is_internal_action = false;
+
+    public Morpheus_Hypervisor $hypervisor;
+    public Morpheus_AI $ai;
+    public Morpheus_Dashboard $dashboard;
+
+    private function __construct() {
+        $config = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_config', [] ) : [];
+        $this->enforcement_mode = ! empty( $config['morpheus_strict_mode'] );
+
+        $this->matrix_file = Morpheus_Path_Jail::root_file('compiled-matrix.json');
+
+        $this->load_compiled_matrix();
+
+        $this->hypervisor = new Morpheus_Hypervisor( $this );
+        $this->ai         = new Morpheus_AI( $this );
+        $this->dashboard  = new Morpheus_Dashboard( $this );
+    }
+
+    private function __clone() {}
+
+    public function __wakeup() {
+        http_response_code( 403 );
+        die( "VGT KERNEL PANIC: MEMORY_CORRUPTION_ATTEMPT. System halted." );
+    }
+
+    public static function get_instance(): self {
+        if ( null === self::$instance ) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    private function load_compiled_matrix(): void {
+        if ( ! is_readable( $this->matrix_file ) ) {
+            $this->permission_matrix = [
+                '_meta' => [
+                    'version' => '1.0',
+                    'last_updated' => gmdate('Y-m-d\TH:i:s\Z'),
+                    'strict_mode' => $this->enforcement_mode
+                ],
+                '_default' => [
+                    'network'  => [], 
+                    'db_write' => [], 
+                    'options'  => []  
+                ]
+            ];
+            $this->apply_matrix( $this->permission_matrix );
+            return;
+        }
+
+        $json = file_get_contents( $this->matrix_file );
+        if ( $json === false ) {
+            die("VGT KERNEL PANIC: IO_READ_ERROR - compiled-matrix.json nicht lesbar.");
+        }
+        
+        $is_installing = class_exists('\\VIS_Bootstrapper')
+            ? \VIS_Bootstrapper::is_installing()
+            : ((defined('WP_INSTALLING') && WP_INSTALLING)
+                || (defined('WP_SETUP_CONFIG') && WP_SETUP_CONFIG)
+                || (function_exists('wp_installing') && wp_installing())
+                || !defined('AUTH_SALT')
+                || strlen((string)AUTH_SALT) < 32);
+
+        if ($is_installing || !function_exists('wp_cache_get') || !function_exists('get_option')) {
+            $this->permission_matrix = [
+                '_meta' => [
+                    'version' => '1.0',
+                    'last_updated' => gmdate('Y-m-d\TH:i:s\Z'),
+                    'strict_mode' => false,
+                ],
+                '_default' => [
+                    'network'  => [], 
+                    'db_write' => [], 
+                    'options'  => [],
+                ],
+            ];
+            $this->apply_matrix( $this->permission_matrix );
+            return;
+        }
+
+        $expected_hash = get_option( 'vgt_matrix_hash' );
+        if (!is_string($expected_hash) || strlen($expected_hash) !== 64) {
+            if (defined('AUTH_SALT') && strlen((string)AUTH_SALT) >= 32) {
+                $expected_hash = hash_hmac('sha256', $json, (string)AUTH_SALT);
+                if (function_exists('update_option')) {
+                    update_option('vgt_matrix_hash', $expected_hash, false);
+                }
+            } else {
+                throw new \SecurityException('Matrix authentication token missing.');
+            }
+        }
+        if (!defined('AUTH_SALT') || strlen((string)AUTH_SALT) < 32) {
+            throw new \SecurityException('Matrix authentication token unavailable.');
+        }
+        $salt = (string)AUTH_SALT;
+        $actual_hash   = hash_hmac( 'sha256', $json, $salt );
+        
+        if (!hash_equals($expected_hash, $actual_hash)) {
+            die("VGT KERNEL PANIC: MATRIX_INTEGRITY_VIOLATION - compiled-matrix.json wurde modifiziert. Lockdown aktiv.");
+        }
+        
+        try {
+            $data = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new \SecurityException('Matrix validation failed.', 0, $e);
+        }
+        if (!is_array($data) || !self::validate_compiled_matrix($data)) {
+            throw new \SecurityException('Matrix validation failed.');
+        }
+        
+        $this->permission_matrix = $data;
+    }
+
+    public function apply_matrix( array $data ): void {
+        if (!self::validate_compiled_matrix($data)) {
+            throw new \SecurityException('Matrix validation failed.');
+        }
+        self::$is_internal_action = true;
+        try {
+            $json = function_exists('\\wp_json_encode')
+                ? \wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+                : json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+            if ( $json === false ) {
+                 throw new \RuntimeException( "JSON Encoding failed." );
+            }
+            
+            $tmp = Morpheus_Path_Jail::root_file(
+                'compiled-matrix.' . bin2hex(random_bytes(16)) . '.tmp'
+            );
+
+            if ( file_put_contents( $tmp, $json, LOCK_EX ) === false ) {
+                throw new \StorageException('Matrix staging write failed.');
+            }
+            @chmod($tmp, 0600);
+            if ( ! rename( $tmp, $this->matrix_file ) ) {
+                @unlink($tmp);
+                throw new \StorageException('Matrix atomic commit failed.');
+            }
+            @chmod($this->matrix_file, 0600);
+            
+            if (defined('AUTH_SALT') && strlen((string)AUTH_SALT) >= 32 && function_exists('wp_cache_get') && function_exists('update_option')) {
+                $salt = (string)AUTH_SALT;
+                update_option( 'vgt_matrix_hash', hash_hmac( 'sha256', $json, $salt ) );
+            } elseif (!class_exists('\\VIS_Bootstrapper') || !\VIS_Bootstrapper::is_installing()) {
+                if (!defined('AUTH_SALT') || strlen((string)AUTH_SALT) < 32) {
+                    throw new \SecurityException('Matrix authentication token unavailable.');
+                }
+            }
+            
+            $this->permission_matrix = $data;
+        } finally {
+            self::$is_internal_action = false;
+        }
+    }
+
+    public function get_plugin_matrix( string $plugin_slug ): array {
+        return $this->get_effective_matrix( $plugin_slug );
+    }
+
+    public function get_base_plugin_matrix( string $plugin_slug ): array {
+        return $this->permission_matrix[ $plugin_slug ] ?? $this->permission_matrix['_default'];
+    }
+
+    public function get_effective_matrix( string $plugin_slug ): array {
+        $base = $this->get_base_plugin_matrix( $plugin_slug );
+        $overlays = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_morpheus_xdr_overlays', [] ) : [];
+        if ( ! is_array( $overlays ) || empty( $overlays ) ) {
+            return $base;
+        }
+
+        $now = time();
+        $effective = $base;
+        foreach ( $overlays as $overlay ) {
+            if ( ! is_array( $overlay ) || empty( $overlay['status'] ) || $overlay['status'] !== 'ACTIVE' ) continue;
+            if ( isset( $overlay['expires_at'] ) && strtotime( (string) $overlay['expires_at'] ) <= $now ) continue;
+            
+            $target = (string) ( $overlay['target_component'] ?? '' );
+            if ( $target !== '*' && $target !== $plugin_slug ) continue;
+
+            $restrictions = is_array( $overlay['restrictions'] ?? null ) ? $overlay['restrictions'] : [];
+            if ( ! empty( $restrictions['network_denied'] ) ) {
+                $effective['network'] = [];
+            }
+            if ( ! empty( $restrictions['db_write_denied'] ) ) {
+                $effective['db_write'] = [];
+            }
+            if ( ! empty( $restrictions['options_denied'] ) ) {
+                $effective['options'] = [];
+            }
+        }
+        return $effective;
+    }
+
+    public function add_xdr_overlay( string $incidentId, string $responseId, string $targetComponent, array $restrictions, int $ttl = 900 ): void {
+        $overlays = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_morpheus_xdr_overlays', [] ) : [];
+        if ( ! is_array( $overlays ) ) $overlays = [];
+
+        $overlays[ $incidentId ] = [
+            'incident_id'      => $incidentId,
+            'response_id'      => $responseId,
+            'target_component' => $targetComponent,
+            'restrictions'     => $restrictions,
+            'created_at'       => gmdate( 'Y-m-d H:i:s' ),
+            'expires_at'       => gmdate( 'Y-m-d H:i:s', time() + $ttl ),
+            'status'           => 'ACTIVE',
+        ];
+        if (function_exists('update_option')) {
+            update_option( 'vis_morpheus_xdr_overlays', $overlays, false );
+        }
+    }
+
+    public function remove_xdr_overlay( string $incidentId, ?string $responseId = null ): void {
+        $overlays = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_morpheus_xdr_overlays', [] ) : [];
+        if ( is_array( $overlays ) && isset( $overlays[ $incidentId ] ) ) {
+            if ( $responseId === null || ($overlays[$incidentId]['response_id'] ?? '') === $responseId ) {
+                unset( $overlays[ $incidentId ] );
+                if (function_exists('update_option')) {
+                    update_option( 'vis_morpheus_xdr_overlays', $overlays, false );
+                }
+            }
+        }
+    }
+
+
+    public function update_plugin_matrix( string $plugin_slug, array $new_matrix ): void {
+        $plugin_slug = Morpheus_Path_Jail::validate_slug($plugin_slug);
+        if (!self::validate_matrix($new_matrix)) {
+            throw new \SecurityException('Matrix validation failed.');
+        }
+        $this->permission_matrix[ $plugin_slug ] = $new_matrix;
+        $this->apply_matrix( $this->permission_matrix );
+    }
+
+    public function delete_plugin_matrix( string $plugin_slug ): void {
+        $plugin_slug = Morpheus_Path_Jail::validate_slug($plugin_slug);
+        if ( isset( $this->permission_matrix[ $plugin_slug ] ) ) {
+            unset( $this->permission_matrix[ $plugin_slug ] );
+            $this->apply_matrix( $this->permission_matrix );
+        }
+    }
+
+    public function get_full_matrix(): array {
+        return $this->permission_matrix;
+    }
+
+    public static function validate_matrix(array $matrix): bool {
+        $required_keys = ['network', 'db_write', 'options'];
+        if (count($matrix) !== count($required_keys)
+            || array_diff($required_keys, array_keys($matrix)) !== []) {
+            return false;
+        }
+
+        foreach ($matrix as $values) {
+            if (!is_array($values) || count($values) > 256) {
+                return false;
+            }
+        }
+        foreach ($matrix['network'] as $host) {
+            if (!is_string($host) || strlen($host) > 253
+                || filter_var($host, FILTER_VALIDATE_IP) !== false
+                || preg_match('/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/iD', $host) !== 1) {
+                return false;
+            }
+        }
+        foreach (['db_write', 'options'] as $key) {
+            foreach ($matrix[$key] as $prefix) {
+                if (!is_string($prefix) || preg_match('/^[a-z0-9_]{2,128}$/iD', $prefix) !== 1
+                    || preg_match('/(?:^|_)(?:users?|usermeta|options|capabilities)(?:_|$)/i', $prefix) === 1) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static function validate_compiled_matrix(array $matrix): bool {
+        if (!isset($matrix['_meta'], $matrix['_default'])
+            || !is_array($matrix['_meta'])
+            || !is_array($matrix['_default'])
+            || !self::validate_matrix($matrix['_default'])) {
+            return false;
+        }
+
+        foreach ($matrix as $slug => $permissions) {
+            if ($slug === '_meta' || $slug === '_default') {
+                continue;
+            }
+            if (!is_string($slug)
+                || preg_match('/^[a-z0-9][a-z0-9_-]{0,127}$/iD', $slug) !== 1
+                || !is_array($permissions)
+                || !self::validate_matrix($permissions)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static function ai_debug(string $msg): void {
+        try {
+            $log_file = Morpheus_Path_Jail::root_file('ai-terminal.log');
+            if (file_put_contents(
+                $log_file,
+                '[' . gmdate('H:i:s') . '] ' . str_replace(["\r", "\n"], ' ', $msg) . "\n",
+                FILE_APPEND | LOCK_EX
+            ) !== false) {
+                @chmod($log_file, 0600);
+            }
+        } catch (\Throwable $e) {
+            error_log('[MORPHEUS DEBUG STORAGE] unavailable');
+        }
+    }
+}

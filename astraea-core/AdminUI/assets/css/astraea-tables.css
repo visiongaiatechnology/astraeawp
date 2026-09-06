@@ -1,0 +1,214 @@
+/* STATUS: DIAMANT VGT SUPREME */
+/**
+ * AstraeaOS Glass Table Styling.
+ * Transforms wp-list-table, filters, pagination, and row actions into high-end data grids.
+ */
+
+/* ==========================================================================
+   1. SEGMENTED TABS (subsubsub)
+   ========================================================================== */
+ul.subsubsub {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    background: var(--astraea-surface-l1) !important;
+    border: 1px solid var(--astraea-border-subtle) !important;
+    border-radius: var(--astraea-radius-full) !important;
+    padding: 3px 6px !important;
+    margin: 16px 0 !important;
+    list-style: none !important;
+}
+
+ul.subsubsub li {
+    font-size: var(--astraea-font-size-xs) !important;
+    color: var(--astraea-text-muted) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+ul.subsubsub li a {
+    color: var(--astraea-text-secondary) !important;
+    padding: 4px 10px !important;
+    border-radius: var(--astraea-radius-full) !important;
+    text-decoration: none !important;
+    transition: var(--astraea-transition-fast) !important;
+}
+
+ul.subsubsub li a:hover {
+    color: var(--astraea-text-primary) !important;
+    background: var(--astraea-surface-hover) !important;
+}
+
+ul.subsubsub li a.current {
+    color: var(--astraea-color-primary) !important;
+    background: var(--astraea-color-primary-dim) !important;
+    font-weight: 600 !important;
+    border: 1px solid var(--astraea-border-glow) !important;
+}
+
+ul.subsubsub li .count {
+    color: var(--astraea-text-muted) !important;
+    margin-left: 2px;
+}
+
+/* ==========================================================================
+   2. TABLE NAV CONTROLS & BULK ACTIONS
+   ========================================================================== */
+.tablenav {
+    height: auto !important;
+    margin: 12px 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+}
+
+.tablenav .actions {
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.tablenav-pages {
+    color: var(--astraea-text-muted) !important;
+    font-size: var(--astraea-font-size-xs) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+.tablenav-pages .page-numbers {
+    background: var(--astraea-surface-l1) !important;
+    border: 1px solid var(--astraea-border-subtle) !important;
+    color: var(--astraea-text-secondary) !important;
+    border-radius: var(--astraea-radius-sm) !important;
+    padding: 4px 8px !important;
+    font-size: var(--astraea-font-size-xs) !important;
+    text-decoration: none !important;
+    min-width: 28px !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    transition: var(--astraea-transition-fast) !important;
+}
+
+.tablenav-pages .page-numbers:hover {
+    border-color: var(--astraea-color-primary) !important;
+    color: var(--astraea-text-primary) !important;
+}
+
+.tablenav-pages .page-numbers.current {
+    background: var(--astraea-color-primary-dim) !important;
+    border-color: var(--astraea-color-primary) !important;
+    color: var(--astraea-color-primary) !important;
+    font-weight: 600 !important;
+}
+
+/* Search Box */
+p.search-box {
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+/* ==========================================================================
+   3. WP LIST TABLE GLASS CONTAINER
+   ========================================================================== */
+.wp-list-table {
+    background: var(--astraea-surface-l1) !important;
+    border: 1px solid var(--astraea-border-subtle) !important;
+    border-radius: var(--astraea-radius-md) !important;
+    box-shadow: var(--astraea-shadow-card) !important;
+    border-spacing: 0 !important;
+    border-collapse: separate !important;
+    overflow: hidden !important;
+    width: 100% !important;
+}
+
+.wp-list-table thead th,
+.wp-list-table tfoot th {
+    background: var(--astraea-surface-l2) !important;
+    color: var(--astraea-text-secondary) !important;
+    font-family: var(--astraea-font-sans) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    padding: 12px 16px !important;
+    border: none !important;
+    border-bottom: 1px solid var(--astraea-border-subtle) !important;
+}
+
+.wp-list-table thead th a,
+.wp-list-table tfoot th a {
+    color: var(--astraea-text-secondary) !important;
+    text-decoration: none !important;
+}
+
+.wp-list-table thead th a:hover {
+    color: var(--astraea-color-primary) !important;
+}
+
+.wp-list-table tbody tr {
+    transition: var(--astraea-transition-fast) !important;
+}
+
+.wp-list-table tbody td {
+    padding: 14px 16px !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    color: var(--astraea-text-primary) !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+    vertical-align: middle !important;
+    background: transparent !important;
+}
+
+.wp-list-table tbody tr:hover td {
+    background: rgba(0, 210, 255, 0.03) !important;
+}
+
+.wp-list-table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* Post Titles & Highlighting */
+.wp-list-table .row-title {
+    color: var(--astraea-text-primary) !important;
+    font-weight: 600 !important;
+    font-size: var(--astraea-font-size-sm) !important;
+    text-decoration: none !important;
+    transition: var(--astraea-transition-fast) !important;
+}
+
+.wp-list-table .row-title:hover {
+    color: var(--astraea-color-primary) !important;
+}
+
+/* Row Actions */
+.wp-list-table .row-actions {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+    margin-top: 4px;
+    font-size: var(--astraea-font-size-xs) !important;
+}
+
+.wp-list-table tr:hover .row-actions {
+    visibility: visible;
+    opacity: 1;
+}
+
+.wp-list-table .row-actions a {
+    color: var(--astraea-color-primary) !important;
+    text-decoration: none !important;
+}
+
+.wp-list-table .row-actions .trash a {
+    color: var(--astraea-color-danger) !important;
+}
+
+.wp-list-table .row-actions span {
+    color: var(--astraea-text-muted) !important;
+}

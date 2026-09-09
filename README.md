@@ -70,6 +70,9 @@ The manuals and architecture documentation are intentionally stored in the **rep
 
 ---
 
+<img width="1920" height="911" alt="image" src="https://github.com/user-attachments/assets/20b10fee-880f-4b7a-a573-943e6e267f55" />
+
+
 # Why AstraeaOS WordPress Edition exists
 
 Classic WordPress is an extremely capable publishing platform.
@@ -147,6 +150,9 @@ The goal is to reduce the number of plugins required merely to build a **secure,
 
 ---
 
+<img width="1920" height="911" alt="image" src="https://github.com/user-attachments/assets/a0976039-4cee-434c-964a-ac9786b8423e" />
+
+
 # AstraeaOS vs. conventional WordPress architecture
 
 | Area | Conventional WordPress approach | AstraeaOS WordPress Edition |
@@ -175,6 +181,9 @@ The goal is to reduce the number of plugins required merely to build a **secure,
 
 ---
 
+<img width="1920" height="911" alt="image" src="https://github.com/user-attachments/assets/98f53cdc-949c-4b32-8a0e-c4cf5b50f8d6" />
+
+
 # Core design principles
 
 ### 🛡️ Security by Design
@@ -202,6 +211,9 @@ The Astraea core and Admin UI do not depend on Composer packages, npm packages, 
 Health and security states are intended to reflect actual probes, integrity checks and runtime evidence rather than static “green” UI states.
 
 ---
+
+<img width="1920" height="911" alt="image" src="https://github.com/user-attachments/assets/f60e5c9e-1a8b-4ad3-96d9-80bad907284e" />
+
 
 # High-level architecture
 

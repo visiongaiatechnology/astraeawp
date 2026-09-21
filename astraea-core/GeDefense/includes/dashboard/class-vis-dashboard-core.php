@@ -44,6 +44,7 @@ final class VIS_Dashboard_Core {
     }
 
     public function display_setup_wizard_notice(): void {
+        if (!get_option('vgt_setup_wizard_completed')) return;
         // In AstraeaOS, setup wizard is pre-completed.
         return;
     }

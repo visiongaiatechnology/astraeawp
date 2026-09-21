@@ -2,6 +2,26 @@
 
 ## 0.6.0-alpha — 2026-09-05
 
+### GeDefense 8.2.4 Multi-Layer Defense & Threat Intelligence
+- Integrated **GeDefense Engine 8.2.4** with pre-flight boot execution, Cerberus L0 wire-speed filtering, Zeus WAF, Aegis DPI, and Hades gate.
+- Integrated **9 Real-Time Threat Intelligence Feeds**: AlienVault OTX, AbuseIPDB, URLhaus, ThreatFox, Feodo Tracker, Blocklist.de, Emerging Threats, Tor Exit Nodes, and PhishTank.
+- Ultra-low-latency **3.10 µs IP Binary Swap Engine** delivering microsecond-level ingress perimeter decisions.
+- **10 Real-Time HUD Probes** for live defense metrics, ingress telemetry, and active threat mitigation status.
+- Added **Security Event Audit Ring Buffer** with authenticated telemetry metrics and zero-leak event journal.
+- Hardened media ingress pipeline with integer-constant MIME cross-checking (`IMAGETYPE_*`), XML SVG sanitization stripping scripts/XXE, EXIF metadata stripping, GD re-encoding, and server WebP/AVIF capability detection.
+
+### Astraea Glass UI & Navigation Architecture
+- Docked **GeDefense WP View Cockpit Layout**: 48px glass topbar alignment, zero-padding viewport fit, and responsive sidebar anchoring.
+- **Submenu Displacement Fix**: Corrected `isSidebarFolded` logic in `astraea-admin.js` to evaluate actual responsive viewport bounds (`<= 960 && > 782`), preventing WordPress core's automatic `body.auto-fold` class from incorrectly triggering detached top-floating flyout menus on desktop viewports.
+- **Submenu Blue Hover Block Elimination**: Neutralized `#adminmenu li` hover/active backgrounds to `transparent !important;` in `astraea-shell.css`, preventing aggressive `#3858e9` blue block artifacts while preserving high-contrast glass pill highlights.
+- **Inline Accordion Docking**: Anchored submenus directly beneath their parent menu items with `position: relative !important; top: 0 !important; margin-top: 2px !important;` across all administrative screens.
+- Enforced flex display and 40px minimum touch target height on `.menu-top` links.
+
+### Astraea Vault & Step-Up Authentication
+- Hardened `StepUpAuthService` session-bound step-up enforcement across sensitive administrative actions.
+- Fixed `Fatal error: Uncaught Astraea\Exceptions\SecurityException: Privileged operation requires current-session step-up authentication` when creating a new Vault or initializing a Backup Vault.
+- Integrated in-place password modal verification and fallback redirect handlers ensuring sensitive vault provisioning operations authenticate gracefully without unhandled exceptions.
+
 ### First-Party Kernel Stack ("WordPress without the Plugin Stack")
 - Added **Astraea Module Fabric** (`astraea-core/Modules/`): Directed Acyclic Graph (DAG) topological module boot sequence, Kahn's algorithm cycle detection, evidence-based live health probes (`ModuleHealth`), and Step-Up protected administrative control UI (`ModuleAdmin`).
 - Added **Astraea Update Engine** (`astraea-core/Update/`): Cryptographic Ed25519 detached manifest verification, SHA-256 package validation, pre-update Vault snapshot, ZipSlip/symlink immune path-jailed extraction, atomic file swapping, and post-update rollback automation.

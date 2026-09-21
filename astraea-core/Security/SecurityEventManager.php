@@ -103,6 +103,51 @@ final class SecurityEventManager {
         return array_slice(array_values(array_filter($events, 'is_array')), 0, max(1, min($limit, self::MAX_EVENTS)));
     }
 
+    /**
+     * Get aggregate statistics from the current audit ring buffer.
+     *
+     * @return array{total: int, critical: int, warning: int, info: int, oldest_timestamp: ?int, newest_timestamp: ?int}
+     */
+    public static function getMetrics(): array {
+        $events = self::getRecentEvents(self::MAX_EVENTS);
+        $total = count($events);
+        $crit = 0;
+        $warn = 0;
+        $info = 0;
+        $oldest = null;
+        $newest = null;
+
+        foreach ($events as $ev) {
+            $sev = strtoupper((string)($ev['severity'] ?? 'INFO'));
+            if ($sev === self::SEVERITY_CRITICAL) {
+                $crit++;
+            } elseif ($sev === self::SEVERITY_WARNING) {
+                $warn++;
+            } else {
+                $info++;
+            }
+
+            $ts = isset($ev['timestamp']) && is_numeric($ev['timestamp']) ? (int)$ev['timestamp'] : null;
+            if ($ts !== null) {
+                if ($newest === null || $ts > $newest) {
+                    $newest = $ts;
+                }
+                if ($oldest === null || $ts < $oldest) {
+                    $oldest = $ts;
+                }
+            }
+        }
+
+        return [
+            'total'            => $total,
+            'critical'         => $crit,
+            'warning'          => $warn,
+            'info'             => $info,
+            'oldest_timestamp' => $oldest,
+            'newest_timestamp' => $newest,
+        ];
+    }
+
     public static function clearEvents(): void {
         if (function_exists('delete_option')) {
             delete_option(self::OPTION_KEY);

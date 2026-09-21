@@ -28,7 +28,7 @@ final class GeDefenseModule extends BaseModule {
             requiredCapabilities: ['manage_options'],
             migrationVersion: '1.0.0',
             securityEventNamespace: 'GeDefense',
-            adminRoute: 'gedefense-dashboard',
+            adminRoute: 'vgt-suite',
             isToggleable: false,
             description: 'Integrated multi-tier perimeter defense, WAF, XDR security fabric, and brute force mitigation.',
             compatibilityInfo: ['xdr_version' => '2.5']
@@ -52,6 +52,15 @@ final class GeDefenseModule extends BaseModule {
             return ModuleHealth::critical('GeDefenseKernel class not loaded.', [], $latency);
         }
 
-        return ModuleHealth::healthy('GeDefense operational. Multi-tier perimeter active.', ['xdr' => 'active'], $latency);
+        $threatIntelReady = class_exists(\VisionGaia\GeDefense\Modules\ThreatIntel\ThreatIntelligence::class);
+
+        return ModuleHealth::healthy(
+            'GeDefense operational. Multi-tier perimeter active.',
+            [
+                'xdr' => 'active',
+                'threat_intel' => $threatIntelReady ? 'ready' : 'not_mounted',
+            ],
+            $latency
+        );
     }
 }

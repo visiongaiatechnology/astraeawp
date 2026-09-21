@@ -202,6 +202,12 @@ final class ControlCenter {
                                 </span>
                             </div>
                             <div class="telemetry-row">
+                                <span class="lbl">Threat Intelligence</span>
+                                <span class="val <?php echo esc_attr(($security['threat_intel']['status'] ?? \Astraea\Diagnostics\HealthStatus::DISABLED)->cssClass()); ?>">
+                                    <?php echo esc_html($security['threat_intel']['label'] ?? 'Disabled (Opt-In)'); ?> (<?php echo esc_html($security['threat_intel']['details'] ?? ''); ?>)
+                                </span>
+                            </div>
+                            <div class="telemetry-row">
                                 <span class="lbl">Astraea FileGuard</span>
                                 <span class="val <?php echo esc_attr($security['fileguard']['status']->cssClass()); ?>">
                                     <span class="check">&#x2714;</span> <?php echo esc_html($security['fileguard']['label']); ?> (<?php echo esc_html($security['fileguard']['details']); ?>)
@@ -444,7 +450,7 @@ final class ControlCenter {
         $morpheus = SecurityProbeManager::probeMorpheus();
         ?>
         <div class="astraea-signal-strip" aria-label="Security telemetry summary">
-            <div class="astraea-signal"><span class="signal-label">Measured probes</span><strong>09</strong><span class="signal-state">evidence-based</span></div>
+            <div class="astraea-signal"><span class="signal-label">Measured probes</span><strong>10</strong><span class="signal-state">evidence-based</span></div>
             <div class="astraea-signal"><span class="signal-label">Crypto probe</span><strong><?php echo esc_html($security['zeus']['label']); ?></strong><span class="signal-state"><?php echo esc_html($security['zeus']['status']->value); ?></span></div>
             <div class="astraea-signal"><span class="signal-label">Runtime</span><strong><?php echo esc_html((string)$telemetry['php_version']); ?></strong><span class="signal-state">PHP</span></div>
             <div class="astraea-signal"><span class="signal-label">Runtime CDN policy</span><strong>NONE</strong><span class="signal-state">zero-dependency</span></div>
@@ -587,6 +593,27 @@ final class ControlCenter {
                         <li><strong>Recovery Gate:</strong> <?php echo !empty($security['vault']['recovery_gate_ready']) ? 'HOOK VERIFIED' : 'NOT VERIFIED'; ?></li>
                         <li><strong>Update Guard:</strong> <?php echo !empty($security['vault']['update_guard_ready']) ? 'HOOK VERIFIED' : 'NOT VERIFIED'; ?></li>
                         <li><strong>Latest backup:</strong> <?php echo esc_html((string)($security['vault']['latest_backup_id'] ?? 'none')); ?><?php echo !empty($security['vault']['latest_verified']) ? ' (VERIFIED)' : ''; ?></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 7. GeDefense Threat Intelligence -->
+            <div class="astraea-cc-card astraea-glass-surface-l2 is-threat-intel">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">&#x1F310;</span>
+                        <h3>GeDefense Threat Intelligence</h3>
+                    </div>
+                    <span class="astraea-status-pill <?php echo esc_attr(($security['threat_intel']['status'] ?? \Astraea\Diagnostics\HealthStatus::DISABLED)->cssClass()); ?>">
+                        <?php echo esc_html($security['threat_intel']['label'] ?? 'Disabled (Opt-In)'); ?>
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="card-desc"><?php echo esc_html($security['threat_intel']['details'] ?? ''); ?></p>
+                    <ul class="astraea-spec-list">
+                        <li><strong>Feed Matrix:</strong> 9 Global C2 &amp; Reputation Feeds (Opt-In)</li>
+                        <li><strong>Lookup Latency:</strong> Packed binary search (~3 µs)</li>
+                        <li><strong>Indicators:</strong> <?php echo (int)($security['threat_intel']['threats_count'] ?? 0); ?> active threats synchronized</li>
                     </ul>
                 </div>
             </div>
@@ -928,11 +955,12 @@ final class ControlCenter {
      */
     private static function renderTabEvents(): void {
         $events = SecurityEventManager::getRecentEvents(100);
+        $metrics = SecurityEventManager::getMetrics();
         ?>
         <div class="astraea-signal-strip" aria-label="Security event telemetry">
             <div class="astraea-signal"><span class="signal-label">Audit mechanism</span><strong>RING-BUFFER</strong><span class="signal-state">200 max FIFO</span></div>
-            <div class="astraea-signal"><span class="signal-label">Sanitization</span><strong>ACTIVE</strong><span class="signal-state">secret-key redaction</span></div>
-            <div class="astraea-signal"><span class="signal-label">Buffered events</span><strong><?php echo count($events); ?></strong><span class="signal-state">live</span></div>
+            <div class="astraea-signal"><span class="signal-label">Total events</span><strong><?php echo (int)$metrics['total']; ?></strong><span class="signal-state">live audit</span></div>
+            <div class="astraea-signal"><span class="signal-label">Critical / Warn</span><strong><?php echo (int)$metrics['critical']; ?> / <?php echo (int)$metrics['warning']; ?></strong><span class="signal-state <?php echo ($metrics['critical'] > 0) ? 'alert' : 'clean'; ?>">incidents</span></div>
             <div class="astraea-signal"><span class="signal-label">Subsystem bridges</span><strong><?php echo \Astraea\Security\SecurityEventBridge::isInitialized() ? 'ACTIVE' : 'NOT READY'; ?></strong><span class="signal-state">Vault / GeDefense + direct Auth / Integrity events</span></div>
         </div>
 
@@ -1027,6 +1055,7 @@ final class ControlCenter {
             'zeus'           => SecurityProbeManager::probeZeusCrypto(),
             'aegis'          => SecurityProbeManager::probeAegis(),
             'titan'          => SecurityProbeManager::probeHttpSecurity(),
+            'threat_intel'   => SecurityProbeManager::probeThreatIntelligence(),
             'fileguard'      => SecurityProbeManager::probeFileGuard(),
             'vault'          => SecurityProbeManager::probeVault(),
             'database'       => SecurityProbeManager::probeDatabase(),

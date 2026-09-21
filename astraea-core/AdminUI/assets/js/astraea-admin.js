@@ -33,13 +33,20 @@
         },
 
         init() {
-            document.addEventListener('DOMContentLoaded', () => {
+            const start = () => {
                 this.initTheme();
                 this.initCommandPalette();
                 this.initNotificationDrawer();
                 this.initGlobalShortcuts();
                 this.initSessionManagement();
-            });
+                this.initSubmenuFlyouts();
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', start);
+            } else {
+                start();
+            }
         },
 
         /* ======================================================================
@@ -509,6 +516,144 @@
                         revokeAllBtn.disabled = false;
                         revokeAllBtn.textContent = 'Log Out All Other Sessions';
                     });
+                });
+            }
+        },
+
+        /* ======================================================================
+           6. SIDEBAR SUBMENU FLYOUT POSITIONING CONTROLLER
+           ====================================================================== */
+        initSubmenuFlyouts() {
+            const adminMenu = document.getElementById('adminmenu');
+            const adminMenuWrap = document.getElementById('adminmenuwrap');
+            if (!adminMenu) {
+                return;
+            }
+
+            const isSidebarFolded = () => {
+                const body = document.body;
+                if (body.classList.contains('folded')) {
+                    return true;
+                }
+                const winWidth = window.innerWidth || document.documentElement.clientWidth;
+                return body.classList.contains('auto-fold') && winWidth <= 960 && winWidth > 782;
+            };
+
+            const positionSubmenu = (menuItem) => {
+                if (!menuItem || !(menuItem instanceof HTMLElement)) {
+                    return;
+                }
+
+                const folded = isSidebarFolded();
+
+                // If sidebar is expanded and this is an active section, it renders inline in the sidebar flow
+                if (!folded && (
+                    menuItem.classList.contains('wp-has-current-submenu') ||
+                    menuItem.classList.contains('wp-menu-open') ||
+                    menuItem.classList.contains('current')
+                )) {
+                    const inlineSubmenu = menuItem.querySelector('.wp-submenu');
+                    if (inlineSubmenu instanceof HTMLElement) {
+                        inlineSubmenu.style.removeProperty('top');
+                        inlineSubmenu.style.removeProperty('margin-top');
+                        inlineSubmenu.style.removeProperty('left');
+                    }
+                    menuItem.style.removeProperty('--astraea-sub-top');
+                    return;
+                }
+
+                const submenu = menuItem.querySelector('.wp-submenu');
+                if (!submenu || !(submenu instanceof HTMLElement)) {
+                    return;
+                }
+
+                const itemRect = menuItem.getBoundingClientRect();
+                if (itemRect.height === 0) {
+                    return;
+                }
+
+                let top = Math.round(itemRect.top);
+                const subHeight = submenu.offsetHeight || submenu.scrollHeight || 180;
+                const winHeight = window.innerHeight || document.documentElement.clientHeight;
+                const topbarHeight = 48; // var(--astraea-topbar-height)
+
+                // Clamp vertically inside viewport
+                if (top + subHeight > winHeight - 12) {
+                    top = Math.max(topbarHeight + 6, winHeight - subHeight - 12);
+                } else if (top < topbarHeight + 4) {
+                    top = topbarHeight + 4;
+                }
+
+                menuItem.style.setProperty('--astraea-sub-top', `${top}px`);
+                submenu.style.setProperty('top', `${top}px`, 'important');
+                submenu.style.setProperty('margin-top', '0px', 'important');
+            };
+
+            const clearSubmenu = (menuItem) => {
+                if (!menuItem || !(menuItem instanceof HTMLElement)) {
+                    return;
+                }
+                menuItem.style.removeProperty('--astraea-sub-top');
+                const submenu = menuItem.querySelector('.wp-submenu');
+                if (submenu instanceof HTMLElement) {
+                    submenu.style.removeProperty('top');
+                    submenu.style.removeProperty('margin-top');
+                    submenu.style.removeProperty('left');
+                }
+            };
+
+            // Bind mouse and focus listeners on all top-level menu items
+            const menuItems = adminMenu.querySelectorAll('li.menu-top');
+            menuItems.forEach((item) => {
+                item.addEventListener('mouseenter', () => positionSubmenu(item), { passive: true });
+                item.addEventListener('focusin', () => positionSubmenu(item), { passive: true });
+                item.addEventListener('mouseleave', () => clearSubmenu(item), { passive: true });
+                item.addEventListener('focusout', (event) => {
+                    if (!item.contains(event.relatedTarget)) {
+                        clearSubmenu(item);
+                    }
+                }, { passive: true });
+            });
+
+            // Re-anchor flyout when sidebar scrolls
+            if (adminMenuWrap) {
+                adminMenuWrap.addEventListener('scroll', () => {
+                    const activeItem = adminMenu.querySelector('li.menu-top.opensub, li.menu-top:hover');
+                    if (activeItem) {
+                        positionSubmenu(activeItem);
+                    }
+                }, { passive: true });
+            }
+
+            // Window resize adjustment
+            window.addEventListener('resize', () => {
+                const activeItem = adminMenu.querySelector('li.menu-top.opensub, li.menu-top:hover');
+                if (activeItem) {
+                    positionSubmenu(activeItem);
+                }
+            }, { passive: true });
+
+            // MutationObserver to capture WordPress core hoverIntent class toggle ('opensub')
+            if (typeof MutationObserver !== 'undefined') {
+                const observer = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            const target = mutation.target;
+                            if (target instanceof HTMLElement && target.classList.contains('menu-top')) {
+                                if (target.classList.contains('opensub')) {
+                                    positionSubmenu(target);
+                                } else if (!target.matches(':hover')) {
+                                    clearSubmenu(target);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                observer.observe(adminMenu, {
+                    attributes: true,
+                    subtree: true,
+                    attributeFilter: ['class']
                 });
             }
         },

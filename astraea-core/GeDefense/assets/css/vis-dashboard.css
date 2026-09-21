@@ -27,7 +27,7 @@
     background: var(--vis-bg-root); 
     color: var(--vis-text-primary); 
     font-family: var(--vis-font-main);
-    margin-left: -20px; /* WP Admin Fix */
+    margin-left: 0;
     position: relative;
 }
 
@@ -41,9 +41,14 @@
     display: flex; 
     flex-direction: column; 
     position: fixed; 
-    height: 97vh; 
+    top: var(--astraea-topbar-height, 48px);
+    left: var(--astraea-sidebar-width, 216px);
+    height: calc(100vh - var(--astraea-topbar-height, 48px)); 
     z-index: 50;
     box-shadow: 5px 0 25px rgba(0,0,0,0.3);
+}
+body.folded .vis-sidebar {
+    left: var(--astraea-sidebar-collapsed-width, 56px);
 }
 .vis-brand { 
     padding: 30px; 

@@ -54,7 +54,7 @@ final class EnvironmentScanner {
             'extensions'      => $extensions,
             'active_plugins'  => $activePlugins,
             'active_theme'    => $activeTheme,
-            'is_ssl'          => is_ssl(),
+            'is_ssl'          => function_exists('is_ssl') ? is_ssl() : false,
             'timestamp'       => time(),
         ];
     }

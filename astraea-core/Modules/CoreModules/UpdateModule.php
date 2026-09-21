@@ -30,7 +30,7 @@ final class UpdateModule extends BaseModule {
             requiredCapabilities: ['update_core'],
             migrationVersion: '1.0.0',
             securityEventNamespace: 'Update',
-            adminRoute: 'astraea-updates',
+            adminRoute: 'astraea-update',
             isToggleable: false,
             description: 'Cryptographically signed Ed25519 distribution updates and upstream WordPress overwrite shield.',
             compatibilityInfo: ['ed25519_signed' => true]

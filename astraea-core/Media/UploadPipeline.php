@@ -65,10 +65,12 @@ final class UploadPipeline {
             throw new SecurityException('Invalid image header. Decryption/parsing failed.');
         }
 
+        $avifType = defined('IMAGETYPE_AVIF') ? IMAGETYPE_AVIF : 19;
         $expectedType = match ($detectedMime) {
             'image/jpeg' => IMAGETYPE_JPEG,
             'image/png'  => IMAGETYPE_PNG,
             'image/webp' => defined('IMAGETYPE_WEBP') ? IMAGETYPE_WEBP : 18,
+            'image/avif' => $avifType,
             'image/gif'  => IMAGETYPE_GIF,
             default      => null,
         };
@@ -88,6 +90,7 @@ final class UploadPipeline {
             IMAGETYPE_JPEG => @imagecreatefromjpeg($tmpPath),
             IMAGETYPE_PNG  => @imagecreatefrompng($tmpPath),
             IMAGETYPE_GIF  => @imagecreatefromgif($tmpPath),
+            $avifType      => (function_exists('imagecreatefromavif') ? @imagecreatefromavif($tmpPath) : false),
             default        => (function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($tmpPath) : false),
         };
 
@@ -106,6 +109,7 @@ final class UploadPipeline {
             IMAGETYPE_JPEG => 'jpg',
             IMAGETYPE_PNG  => 'png',
             IMAGETYPE_GIF  => 'gif',
+            $avifType      => 'avif',
             default        => 'webp',
         };
 
@@ -124,6 +128,7 @@ final class UploadPipeline {
                 IMAGETYPE_JPEG => imagejpeg($imageResource, $destination, 85),
                 IMAGETYPE_PNG  => imagepng($imageResource, $destination, 6),
                 IMAGETYPE_GIF  => imagegif($imageResource, $destination),
+                $avifType      => (function_exists('imageavif') ? imageavif($imageResource, $destination, 80) : false),
                 default        => imagewebp($imageResource, $destination, 85),
             };
 

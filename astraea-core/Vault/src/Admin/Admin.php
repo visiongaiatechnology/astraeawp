@@ -57,6 +57,9 @@ final class Admin
         $notices = $this->notifier->notices();
         $status = isset($_GET['av_status']) ? sanitize_key(wp_unslash($_GET['av_status'])) : '';
         $message = isset($_GET['av_message']) ? sanitize_text_field(wp_unslash($_GET['av_message'])) : '';
+        $userId = get_current_user_id();
+        $isElevated = class_exists(\Astraea\Auth\StepUpAuthService::class) && \Astraea\Auth\StepUpAuthService::isStepUpActive($userId);
+        $verifyUrl = class_exists(\Astraea\Auth\StepUpAuthService::class) ? \Astraea\Auth\StepUpAuthService::getVerificationUrl(admin_url('admin.php?page=astraea-vault')) : '';
         ?>
         <div class="wrap av-wrap">
             <header class="av-hero">
@@ -84,15 +87,15 @@ final class Admin
             <?php endforeach; ?>
 
             <?php if (!$initialized): ?>
-                <?php $this->renderSetup(); ?>
+                <?php $this->renderSetup($isElevated, $verifyUrl); ?>
             <?php else: ?>
-                <?php $this->renderOverview($backups, $incidents, $settings); ?>
+                <?php $this->renderOverview($backups, $incidents, $settings, $isElevated, $verifyUrl); ?>
             <?php endif; ?>
         </div>
         <?php
     }
 
-    private function renderSetup(): void
+    private function renderSetup(bool $isElevated, string $verifyUrl): void
     {
         ?>
         <section class="av-panel av-setup">
@@ -103,13 +106,21 @@ final class Admin
                 <?php wp_nonce_field('astraea_vault_initialize'); ?>
                 <label><span>Vault passphrase</span><input type="password" name="passphrase" minlength="16" maxlength="4096" autocomplete="new-password" required></label>
                 <label><span>Confirm passphrase</span><input type="password" name="passphrase_confirm" minlength="16" maxlength="4096" autocomplete="new-password" required></label>
+                <div class="av-stepup-box">
+                    <?php if ($isElevated): ?>
+                        <div class="av-stepup-status"><span class="av-chip is-ok">&#x2714; SITZUNG AUTORISIERT</span><small style="color:var(--av-muted);">Deine Sitzung ist f&uuml;r privilegierte &Auml;nderungen autorisiert.</small></div>
+                    <?php else: ?>
+                        <label><span>Administrator-Passwort (Sitzungs-Best&auml;tigung)</span><input type="password" name="astraea_stepup_password" autocomplete="current-password" placeholder="Passwort zur sofortigen Autorisierung" required></label>
+                        <p class="description" style="margin:4px 0 0;font-size:12px;color:var(--av-muted);">Die Initialisierung des Vaults ist ein privilegiertes Sicherheitsmerkmal. Best&auml;tige hier direkt dein Passwort oder autorisiere deine Sitzung unter <a href="<?php echo esc_url($verifyUrl); ?>" style="color:var(--av-accent);">Security &rarr; Sessions</a> f&uuml;r 15 Minuten.</p>
+                    <?php endif; ?>
+                </div>
                 <div class="av-form-actions"><button class="button button-primary av-btn av-primary" type="submit">Initialize Vault</button></div>
             </form>
         </section>
         <?php
     }
 
-    private function renderOverview(array $backups, array $incidents, array $settings): void
+    private function renderOverview(array $backups, array $incidents, array $settings, bool $isElevated = false, string $verifyUrl = ''): void
     {
         $last = $backups[0] ?? null;
         $verified = count(array_filter($backups, static fn(array $b): bool => ($b['status'] ?? '') === 'verified'));
@@ -150,6 +161,12 @@ final class Admin
                         <?php $this->checkbox('auto_rollback', 'Automatic plugin rollback', !empty($settings['auto_rollback'])); ?>
                         <?php $this->checkbox('email_notifications', 'Email recovery notifications', !empty($settings['email_notifications'])); ?>
                     </div>
+                    <?php if (!$isElevated): ?>
+                        <div class="av-stepup-box">
+                            <label><span>Administrator-Passwort (Sitzungs-Best&auml;tigung)</span><input type="password" name="astraea_stepup_password" autocomplete="current-password" placeholder="Passwort zur sofortigen Autorisierung"></label>
+                            <p class="description" style="margin:4px 0 0;font-size:12px;color:var(--av-muted);">Richtlinien&auml;nderungen ben&ouml;tigen Step-Up Autorisierung. Oder unter <a href="<?php echo esc_url($verifyUrl); ?>" style="color:var(--av-accent);">Security &rarr; Sessions</a> autorisieren.</p>
+                        </div>
+                    <?php endif; ?>
                     <div class="av-form-actions"><button class="button av-btn" type="submit">Save policy</button></div>
                 </form>
             </section>
@@ -197,6 +214,12 @@ final class Admin
                     <label><span>Current passphrase</span><input type="password" name="old_passphrase" autocomplete="current-password" required></label>
                     <label><span>New passphrase</span><input type="password" name="new_passphrase" minlength="16" maxlength="4096" autocomplete="new-password" required></label>
                     <label><span>Confirm new passphrase</span><input type="password" name="new_passphrase_confirm" minlength="16" maxlength="4096" autocomplete="new-password" required></label>
+                    <?php if (!$isElevated): ?>
+                        <div class="av-stepup-box">
+                            <label><span>Administrator-Passwort (Sitzungs-Best&auml;tigung)</span><input type="password" name="astraea_stepup_password" autocomplete="current-password" placeholder="Passwort zur sofortigen Autorisierung"></label>
+                            <p class="description" style="margin:4px 0 0;font-size:12px;color:var(--av-muted);">Passphrase-Rotation ben&ouml;tigt Step-Up Autorisierung. Oder unter <a href="<?php echo esc_url($verifyUrl); ?>" style="color:var(--av-accent);">Security &rarr; Sessions</a> autorisieren.</p>
+                        </div>
+                    <?php endif; ?>
                     <div class="av-form-actions"><button class="button av-btn" type="submit">Rotate passphrase</button></div>
                 </form>
             </section>

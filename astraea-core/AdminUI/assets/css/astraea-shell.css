@@ -1019,6 +1019,21 @@ body.rtl .astraea-lang-item .lang-check {
     box-sizing: border-box !important;
 }
 
+/* Neutralize WordPress core background leakage on admin menu list items */
+#adminmenu li,
+#adminmenu li.menu-top,
+#adminmenu li.menu-top:hover,
+#adminmenu li.opensub,
+#adminmenu li.current,
+#adminmenu li.wp-has-current-submenu,
+#adminmenu li.wp-has-current-submenu:hover,
+#adminmenu li.wp-has-current-submenu.opensub,
+#adminmenu li.wp-has-current-submenu.wp-menu-open {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
 body.folded #adminmenuback,
 body.folded #adminmenuwrap,
 body.folded #adminmenu {
@@ -1048,6 +1063,11 @@ body.folded #adminmenu {
     background: transparent !important;
     box-sizing: border-box !important;
     width: calc(100% - 16px) !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 40px !important;
+    height: auto !important;
+    position: relative !important;
 }
 
 #adminmenu .wp-menu-name {
@@ -1070,7 +1090,9 @@ body.folded #adminmenu {
 }
 
 #adminmenu li.current > a.menu-top,
-#adminmenu li.wp-has-current-submenu > a.menu-top {
+#adminmenu li.wp-has-current-submenu > a.menu-top,
+#adminmenu a.wp-has-current-submenu,
+#adminmenu li.wp-has-current-submenu a.wp-has-current-submenu {
     color: #ffffff !important;
     background: linear-gradient(90deg, rgba(0, 210, 255, 0.28) 0%, rgba(0, 160, 255, 0.10) 100%) !important;
     border-left-color: var(--astraea-color-primary) !important;
@@ -1097,10 +1119,15 @@ body.folded #adminmenu {
 
 /* Base Submenu inside Sidebar (Inline for Active Top-Level) */
 #adminmenu .wp-has-current-submenu .wp-submenu,
-#adminmenu .wp-has-current-submenu.wp-menu-open .wp-submenu {
+#adminmenu .wp-has-current-submenu.wp-menu-open .wp-submenu,
+#adminmenu:not(.folded) .wp-has-current-submenu .wp-submenu,
+#adminmenu:not(.folded) .wp-has-current-submenu.wp-menu-open .wp-submenu,
+#adminmenu:not(.folded) .wp-has-current-submenu:hover .wp-submenu,
+#adminmenu:not(.folded) .wp-has-current-submenu.opensub .wp-submenu {
     position: relative !important;
     left: 0 !important;
     top: 0 !important;
+    margin-top: 2px !important;
     display: block !important;
     background: rgba(6, 16, 36, 0.65) !important;
     border-left: 2px solid rgba(0, 210, 255, 0.3) !important;
@@ -1111,6 +1138,7 @@ body.folded #adminmenu {
     padding: 4px 8px 8px 12px !important;
     margin: 2px 8px 6px 14px !important;
     width: auto !important;
+    box-sizing: border-box !important;
 }
 
 #adminmenu .wp-has-current-submenu .wp-submenu .wp-submenu-head {
@@ -1144,6 +1172,8 @@ body.folded #adminmenu {
 body.folded #adminmenu li.opensub > .wp-submenu,
 body.folded #adminmenu li.menu-top:hover > .wp-submenu {
     position: fixed !important;
+    top: var(--astraea-sub-top, auto) !important;
+    margin-top: 0 !important;
     left: calc(var(--astraea-sidebar-width, 216px) + 4px) !important;
     width: 210px !important;
     background: linear-gradient(135deg, rgba(13, 30, 58, 0.96) 0%, rgba(8, 18, 36, 0.98) 100%) !important;

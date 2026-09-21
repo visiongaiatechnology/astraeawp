@@ -34,10 +34,10 @@ final class GeDefenseKernel {
         }
 
         if (!defined('VIS_VERSION')) {
-            define('VIS_VERSION', '8.1.0-astraea');
+            define('VIS_VERSION', '8.2.4-astraea');
         }
         if (!defined('VIS_MANIFEST_DIGEST')) {
-            define('VIS_MANIFEST_DIGEST', '64d3be758103abdd185d5453bb7f8ff8712af1f1296ec6b03c3f6a6fc6f3b0a5');
+            define('VIS_MANIFEST_DIGEST', '98f6fa495e55fea918acf7b53c2a93f3c2cd383156cccdb0d2b8f39fe7ede352');
         }
         if (!defined('VIS_PRODUCT_NAME')) {
             define('VIS_PRODUCT_NAME', 'GeDefense WP — AstraeaOS Core Security Kernel');

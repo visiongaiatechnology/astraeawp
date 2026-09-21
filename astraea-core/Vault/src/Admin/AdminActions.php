@@ -385,10 +385,26 @@ final class AdminActions
         if (!class_exists(\Astraea\Auth\StepUpAuthService::class)) {
             throw new SecurityException('Privileged authentication service unavailable.');
         }
+        $userId = get_current_user_id();
+        if (!empty($_POST['astraea_stepup_password']) && is_string($_POST['astraea_stepup_password'])) {
+            try {
+                if (\Astraea\Auth\StepUpAuthService::verifyStepUpChallenge($userId, (string)wp_unslash($_POST['astraea_stepup_password']))) {
+                    return;
+                }
+            } catch (\Throwable) {}
+        }
         try {
-            \Astraea\Auth\StepUpAuthService::guardSensitiveAction(get_current_user_id(), $operation);
-        } catch (\Astraea\Exceptions\SecurityException $e) {
-            throw new SecurityException('Privileged operation rejected by Astraea security policy.', 0, $e);
+            \Astraea\Auth\StepUpAuthService::guardSensitiveAction($userId, $operation);
+        } catch (\Throwable $e) {
+            AstraeaCore::log('security', 'Vault privileged operation blocked pending step-up re-authentication.', ['operation' => $operation]);
+            $verifyUrl = \Astraea\Auth\StepUpAuthService::getVerificationUrl(admin_url('admin.php?page=astraea-vault'));
+            $title = esc_html__('Step-Up Re-Authentication Required', 'astraea-vault');
+            $buttonText = esc_html__('Re-authenticate in Security → Sessions now', 'astraea-vault');
+            $msg = sprintf(
+                esc_html__('Current-session re-authentication is required in Security → Sessions. %s', 'astraea-vault'),
+                '<br><br><a href="' . esc_url($verifyUrl) . '" class="button button-primary" style="display:inline-block;padding:8px 16px;text-decoration:none;border-radius:6px;">' . $buttonText . '</a>'
+            );
+            wp_die($msg, $title, ['response' => 403, 'back_link' => true]);
         }
     }
 

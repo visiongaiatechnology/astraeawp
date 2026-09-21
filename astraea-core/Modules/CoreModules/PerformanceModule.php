@@ -49,7 +49,7 @@ final class PerformanceModule extends BaseModule {
 
     public function probeHealth(): ModuleHealth {
         $start = hrtime(true);
-        $cacheDir = WP_CONTENT_DIR . '/cache/astraea-page-cache';
+        $cacheDir = PageCache::getCacheDirectory();
         $writable = is_dir($cacheDir) ? is_writable($cacheDir) : is_writable(dirname($cacheDir));
         $latency = (int)round((hrtime(true) - $start) / 1e6);
 

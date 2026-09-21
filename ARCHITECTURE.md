@@ -3825,21 +3825,23 @@ Im Rahmen der tiefen statischen und dynamischen Analyse des vorhandenen Codes wu
 
 ---
 
-### 12.3 Fehlende Funktions- und Konstanten-Guards
+### 12.3 Fehlende Funktions- und Konstanten-Guards [BEHOBEN / RESOLVED]
+- **Status:** **BEHOBEN (DIAMANT VGT SUPREME)**
 1. **`PerformanceModule.php` (Zeile 52):**  
-   Greift direkt auf die Konstante `WP_CONTENT_DIR` zu (`is_dir(WP_CONTENT_DIR . '/cache')`), ohne vorab mit `defined('WP_CONTENT_DIR')` zu prüfen. Führt zu einem fatalen Fehler, wenn das Modul außerhalb des vollständigen WordPress-Ladekontexts (z. B. in CLI-Diagnostik) abgefragt wird.
+   Greift nun über `PageCache::getCacheDirectory()` auf das Cache-Verzeichnis zu, welches intern `defined('WP_CONTENT_DIR')` typensicher prüft und bei isolierter CLI-Ausführung auf das System-Temp-Verzeichnis zurückfällt.
 2. **`Migration/EnvironmentScanner.php` (Zeile 57):**  
-   Ruft `is_ssl()` auf, ohne `function_exists('is_ssl')` zu prüfen.
-3. **`Maintenance/MaintenanceController.php` (Zeile 82):**  
-   Ruft `get_option()` auf, ohne `function_exists('get_option')` abzusichern.
+   Ruft `is_ssl()` nun abgesichert über `function_exists('is_ssl') ? is_ssl() : false` auf.
+3. **`Maintenance/MaintenanceController.php` (Zeilen 82, 90, 99):**  
+   Ruft `get_option()`, `update_option()` und `get_bloginfo()` über strikte `function_exists()`-Guards auf.
 
 ---
 
-### 12.4 Routen-Diskrepanzen zwischen `ModuleDescriptor` und Admin-Menü
-In drei Modulen weicht der im Deskriptor angegebene `adminRoute`-Slug vom tatsächlich über `add_submenu_page()` registrierten Menü-Slug ab:
-- **Modul `update`:** Deskriptor deklariert `adminRoute = 'astraea-updates'`. In `UpdateAdmin.php` (Zeile 32) wird der Menü-Slug jedoch als `'astraea-update'` (ohne 's') registriert.
-- **Modul `vlp`:** Deskriptor deklariert `adminRoute = 'astraea-vlp-settings'`. In `VLP\Light\Admin\AdminPage.php` (Zeile 24) wird der Menü-Slug jedoch als `'astraea-vlp-light'` registriert.
-- **Modul `gedefense`:** Deskriptor deklariert `adminRoute = 'gedefense-dashboard'`. In `class-vis-dashboard-core.php` (Zeile 113) wird der Menü-Slug jedoch als `'vgt-suite'` bzw. im ControlCenter als `'astraea-security'` registriert.
+### 12.4 Routen-Diskrepanzen zwischen `ModuleDescriptor` und Admin-Menü [BEHOBEN / RESOLVED]
+- **Status:** **BEHOBEN (DIAMANT VGT SUPREME)**
+Sämtliche `adminRoute`-Attribute in den ersten-Party-Moduldeskriptoren wurden mit den tatsächlich registrierten Slugs harmonisiert:
+- **Modul `update`:** `adminRoute = 'astraea-update'` (identisch mit `UpdateAdmin.php`).
+- **Modul `vlp`:** `adminRoute = 'astraea-vlp-light'` (identisch mit `VLP\Light\Admin\AdminPage.php`).
+- **Modul `gedefense`:** `adminRoute = 'vgt-suite'` (identisch mit `class-vis-dashboard-core.php`).
 
 ---
 
@@ -3851,5 +3853,18 @@ Während Astraea Core strikt auf PSR-4 (`Astraea\...`), PHP 8.3 Strict Types und
 
 ### 12.6 Doppelte bzw. konkurrierende Header-Services
 Sowohl `Astraea\Security\HeaderPolicyService` als auch `VIS_Titan` (`astraea-core/GeDefense/includes/modules/titan/`) implementieren CSP- und Sicherheits-Header. Astraea 0.6.0-alpha löst dies elegant, indem `HeaderPolicyService` sich automatisch zurückzieht, sobald Titan autoritativ geladen ist. Entwickler sollten jedoch beachten, dass zwei separate Konfigurationsebenen für Header existieren.
+
+---
+
+### 12.7 GeDefense 8.2.4 Threat Intelligence Telemetrie & AVIF Media Ingress [INTEGRIERT]
+- **Status:** **INTEGRIERT (DIAMANT VGT SUPREME)**
+1. **Threat Intelligence Diagnostic Probe:**  
+   `Astraea\Diagnostics\SecurityProbeManager::probeThreatIntelligence()` bindet die 9-Feed Threat Intelligence Matrix aus GeDefense 8.2.4 dynamisch ein (Feed-Zustand, Indikator-Zähler, letzter Synchronisationszeitstempel).
+2. **Mission Control HUD & Security Center:**  
+   `ControlCenter.php` visualisiert Threat Intelligence im Dashboard-HUD sowie als dedizierte Komponente in der Tab-Übersicht des Security Centers.
+3. **AVIF Media Ingress & Anti-Polyglot Re-Encoding:**  
+   `UploadPipeline.php` und `FileGuard.php` wurden gehärtet, um AVIF (`image/avif`, `IMAGETYPE_AVIF`) unter Wahrung der VGT-Muster 1.5.B, 1.5.D (MIME Cross-Check) und Decompressions-Memory-Pre-Flight nativ zu verifizieren und sicher neu zu encodieren.
+4. **Security Event Audit Ring-Buffer Metriken:**  
+   `SecurityEventManager::getMetrics()` stellt strukturierte Aggregat-Zähler (Total, Critical, Warning, Info, Zeitspanne) ohne zusätzlichen Datenbank-Overhead zur Verfügung.
 
 ---

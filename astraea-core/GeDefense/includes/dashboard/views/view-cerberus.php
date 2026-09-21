@@ -7,6 +7,34 @@ if (!defined('ABSPATH')) exit('VGT_ACCESS_DENIED');
 global $wpdb;
 $table_bans = defined('VIS_TABLE_BANS') ? $wpdb->prefix . VIS_TABLE_BANS : $wpdb->prefix . 'vis_bans';
 
+// LIVE PREVIEW HANDLER
+if (current_user_can('manage_options') && isset($_GET['preview_block']) && $_GET['preview_block'] === '1') {
+    if (check_admin_referer('vis_cerberus_preview_action')) {
+        if (class_exists('VIS_Cerberus')) {
+            $is_prom = isset($_GET['preview_engine']) && $_GET['preview_engine'] === 'prometheus';
+            $preview_engine = $is_prom
+                ? 'PROMETHEUS ZERO-TRUST MATRIX // OMEGA PROTOCOL'
+                : 'CERBERUS XDR KERNEL';
+            $preview_badge = $is_prom
+                ? 'PROMETHEUS // PREDICTIVE MITIGATION'
+                : 'CERBERUS // ACTIVE MITIGATION';
+            $preview_prefix = $is_prom ? 'PROM' : 'CERB';
+            $preview_msg = $is_prom
+                ? 'PROMETHEUS_PREDICTIVE_STRIKE (Threat Score: 208)'
+                : 'POLICY_VIOLATION // BRUTE_FORCE_THRESHOLD_EXCEEDED';
+
+            echo VIS_Cerberus::instance()->render_block_page($preview_msg, '198.51.100.42', [
+                'engine' => $preview_engine,
+                'badge' => $preview_badge,
+                'ref_prefix' => $preview_prefix,
+                'defense_engine' => 'VisionGaia-Preview',
+            ]);
+            exit;
+        }
+    }
+}
+
+// ACTION 1: MANUAL BAN
 if (current_user_can('manage_options') && isset($_POST['vis_manual_ban_submit']) && check_admin_referer('vis_manual_ban_action')) {
     $ban_ip = isset($_POST['ban_ip']) && is_string($_POST['ban_ip']) ? sanitize_text_field(wp_unslash($_POST['ban_ip'])) : '';
     $ban_reason = isset($_POST['ban_reason']) && is_string($_POST['ban_reason']) ? sanitize_text_field(wp_unslash($_POST['ban_reason'])) : 'MANUAL_ADMIN_BAN';
@@ -15,16 +43,58 @@ if (current_user_can('manage_options') && isset($_POST['vis_manual_ban_submit'])
 
     if (filter_var($ban_ip, FILTER_VALIDATE_IP)) {
         if (class_exists('VIS_Cerberus')) {
-            VIS_Cerberus::ban_ip($ban_ip, $ban_reason, $ban_duration);
+            VIS_Cerberus::instance()->ban_ip($ban_ip, $ban_reason);
         }
     }
 }
 
+// ACTION 2: UNBAN TARGET
 if (current_user_can('manage_options') && isset($_POST['vis_unban_ip_submit']) && check_admin_referer('vis_unban_ip_action')) {
     $unban_ip = isset($_POST['unban_ip']) && is_string($_POST['unban_ip']) ? sanitize_text_field(wp_unslash($_POST['unban_ip'])) : '';
     if ($unban_ip !== '' && class_exists('VIS_Cerberus')) {
-        VIS_Cerberus::unban_ip($unban_ip);
+        VIS_Cerberus::instance()->unban_target($unban_ip);
     }
+}
+
+// ACTION 3: SAVE BRANDING / CUSTOMIZER
+$branding_saved = false;
+if (current_user_can('manage_options') && isset($_POST['vis_cerberus_branding_submit']) && check_admin_referer('vis_cerberus_branding_action')) {
+    $raw_branding   = isset($_POST['vis_branding']) && is_array($_POST['vis_branding']) ? wp_unslash($_POST['vis_branding']) : [];
+    $raw_overlay    = isset($raw_branding['bg_overlay_opacity']) ? (int)$raw_branding['bg_overlay_opacity'] : 85;
+    $clean_overlay  = max(30, min(98, $raw_overlay));
+    $clean_accent   = !empty($raw_branding['accent_color']) && is_string($raw_branding['accent_color']) ? sanitize_hex_color($raw_branding['accent_color']) : '#00e5ff';
+
+    $clean_branding = [
+        'enabled'              => !empty($raw_branding['enabled']),
+        'page_title'           => sanitize_text_field($raw_branding['page_title'] ?? ''),
+        'company_name'         => sanitize_text_field($raw_branding['company_name'] ?? ''),
+        'company_tagline'      => sanitize_text_field($raw_branding['company_tagline'] ?? ''),
+        'company_description'  => sanitize_textarea_field($raw_branding['company_description'] ?? ''),
+        'company_features'     => sanitize_textarea_field($raw_branding['company_features'] ?? ''),
+        'support_phone'        => sanitize_text_field($raw_branding['support_phone'] ?? ''),
+        'support_email'        => sanitize_email($raw_branding['support_email'] ?? ''),
+        'company_address'      => sanitize_textarea_field($raw_branding['company_address'] ?? ''),
+        'business_hours'       => sanitize_text_field($raw_branding['business_hours'] ?? ''),
+        'logo_url'             => esc_url_raw($raw_branding['logo_url'] ?? ''),
+        'bg_image_url'         => esc_url_raw($raw_branding['bg_image_url'] ?? ''),
+        'bg_overlay_opacity'   => $clean_overlay,
+        'accent_color'         => $clean_accent ?: '#00e5ff',
+        'custom_security_note' => sanitize_textarea_field($raw_branding['custom_security_note'] ?? ''),
+        'custom_notice'        => sanitize_textarea_field($raw_branding['custom_security_note'] ?? ($raw_branding['custom_notice'] ?? '')),
+        'layout_mode'          => in_array($raw_branding['layout_mode'] ?? '', ['banner_top', 'banner_bottom', 'classic'], true) ? $raw_branding['layout_mode'] : 'banner_top',
+    ];
+    update_option('vis_cerberus_branding', $clean_branding);
+    $branding_saved = true;
+}
+
+$branding = get_option('vis_cerberus_branding', []);
+if (!is_array($branding)) {
+    $branding = [];
+}
+
+$cerb_section = isset($_GET['cerb_section']) && is_string($_GET['cerb_section']) ? sanitize_key($_GET['cerb_section']) : 'roster';
+if (!in_array($cerb_section, ['roster', 'branding'], true)) {
+    $cerb_section = 'roster';
 }
 
 $bans_per_page = 20; 
@@ -47,6 +117,10 @@ if ($wpdb->get_var("SHOW TABLES LIKE '{$table_bans}'") === $table_bans) {
 $wpdb->suppress_errors($suppress);
 
 $total_pages = (int)max(1, ceil($total_bans / $bans_per_page));
+
+$preview_nonce = wp_create_nonce('vis_cerberus_preview_action');
+$preview_cerb_url = admin_url('admin.php?page=vgt-suite&tab=cerberus&preview_block=1&preview_engine=cerberus&_wpnonce=' . $preview_nonce);
+$preview_prom_url = admin_url('admin.php?page=vgt-suite&tab=cerberus&preview_block=1&preview_engine=prometheus&_wpnonce=' . $preview_nonce);
 ?>
 
 <section class="vgt-titan" aria-label="Cerberus Perimeter Defense">
@@ -69,96 +143,273 @@ $total_pages = (int)max(1, ceil($total_bans / $bans_per_page));
         <article><small><?php esc_html_e('THREATS NEUTRALIZED (24H)', 'vgt-sentinel'); ?></small><strong style="color: #5eead4;"><?php echo esc_html(number_format_i18n($recent_bans)); ?></strong></article>
         <article><small><?php esc_html_e('PAGINATION ENGINE', 'vgt-sentinel'); ?></small><strong><?php echo esc_html((string)$current_page); ?> / <?php echo esc_html((string)$total_pages); ?></strong></article>
         <article><small><?php esc_html_e('STORAGE ENGINE', 'vgt-sentinel'); ?></small><strong>OPCACHE + DB</strong></article>
-        <article><small><?php esc_html_e('EDGE EXPORT', 'vgt-sentinel'); ?></small><strong>NGINX / APACHE</strong></article>
+        <article><small><?php esc_html_e('BRANDING STATUS', 'vgt-sentinel'); ?></small><strong style="color: <?php echo !empty($branding['enabled']) ? '#5eead4' : '#94a3b8'; ?>;"><?php echo !empty($branding['enabled']) ? esc_html__('AKTIV', 'vgt-sentinel') : esc_html__('STANDARDFARBE', 'vgt-sentinel'); ?></strong></article>
         <article><small><?php esc_html_e('RESPONSE LATENCY', 'vgt-sentinel'); ?></small><strong>0.00ms</strong></article>
     </div>
 
-    <nav class="vgt-titan-nav" aria-label="Cerberus Bereiche">
-        <a href="#cerb-roster"><?php esc_html_e('Active Threat Roster', 'vgt-sentinel'); ?> (<?php echo esc_html((string)$total_bans); ?>)</a>
-        <a href="#cerb-manual"><?php esc_html_e('Manual Ban Enforcement', 'vgt-sentinel'); ?></a>
+    <nav class="vgt-titan-nav" aria-label="<?php echo esc_attr__('Cerberus Bereiche', 'vgt-sentinel'); ?>">
+        <a class="<?php echo $cerb_section === 'roster' ? 'is-active' : ''; ?>"
+           href="<?php echo esc_url(admin_url('admin.php?page=vgt-suite&tab=cerberus&cerb_section=roster')); ?>">
+            <?php esc_html_e('Active Threat Roster', 'vgt-sentinel'); ?> (<?php echo esc_html((string)$total_bans); ?>)
+        </a>
+        <a class="<?php echo $cerb_section === 'branding' ? 'is-active' : ''; ?>"
+           href="<?php echo esc_url(admin_url('admin.php?page=vgt-suite&tab=cerberus&cerb_section=branding')); ?>">
+            <?php esc_html_e('Block-Page Personalisierung & Branding', 'vgt-sentinel'); ?>
+        </a>
     </nav>
 
-    <!-- SECTION 1: ACTIVE THREAT ROSTER -->
-    <section id="cerb-roster" class="vgt-titan-panel">
-        <div class="vgt-titan-panel-head">
-            <div>
-                <small><?php esc_html_e('01 / PERIMETER MATRIX', 'vgt-sentinel'); ?></small>
-                <h3><?php esc_html_e('Active Threat Roster & In-Memory Bans', 'vgt-sentinel'); ?></h3>
-            </div>
-            <span class="vgt-titan-badge"><?php echo esc_html((string)$total_bans); ?> <?php esc_html_e('ACTIVE BANS', 'vgt-sentinel'); ?></span>
+    <?php if ($branding_saved): ?>
+        <div class="vis-dashboard-notice is-success" style="margin: 16px 0;" role="status">
+            <?php esc_html_e('Sperrseiten-Personalisierung erfolgreich gespeichert und synchronisiert.', 'vgt-sentinel'); ?>
         </div>
+    <?php endif; ?>
 
-        <?php if (empty($bans)): ?>
-            <div class="vgt-titan-empty" style="padding: 24px 0; color: #5eead4; text-align: center;">
-                <?php esc_html_e('PERIMETER CLEAN — Keine aktiven IP-Sperren im Opcache verzeichnet.', 'vgt-sentinel'); ?>
+    <?php if ($cerb_section === 'branding'): ?>
+        <!-- SECTION: BLOCK-PAGE PERSONALISIERUNG & BRANDING -->
+        <section id="cerb-branding" class="vgt-titan-panel">
+            <div class="vgt-titan-panel-head">
+                <div>
+                    <small><?php esc_html_e('03 / ACCESS RESTRICTED CUSTOMIZER', 'vgt-sentinel'); ?></small>
+                    <h3><?php esc_html_e('Sperrseiten-Personalisierung & Unternehmens-Branding', 'vgt-sentinel'); ?></h3>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <a href="<?php echo esc_url($preview_cerb_url); ?>" target="_blank" rel="noopener" class="button" style="background: rgba(0, 229, 255, 0.1); border: 1px solid #00e5ff; color: #00e5ff; font-weight: 700; font-size: 11px;">
+                        👁 <?php esc_html_e('Vorschau: Cerberus', 'vgt-sentinel'); ?>
+                    </a>
+                    <a href="<?php echo esc_url($preview_prom_url); ?>" target="_blank" rel="noopener" class="button" style="background: rgba(255, 42, 95, 0.1); border: 1px solid #ff2a5f; color: #ff2a5f; font-weight: 700; font-size: 11px;">
+                        👁 <?php esc_html_e('Vorschau: Prometheus', 'vgt-sentinel'); ?>
+                    </a>
+                </div>
             </div>
-        <?php else: ?>
-            <div class="vgt-titan-table-wrap">
-                <table class="vgt-titan-table">
-                    <thead>
-                        <tr>
-                            <th><?php esc_html_e('IP-Adresse', 'vgt-sentinel'); ?></th>
-                            <th><?php esc_html_e('Banned At', 'vgt-sentinel'); ?></th>
-                            <th><?php esc_html_e('Reason / Origin', 'vgt-sentinel'); ?></th>
-                            <th style="text-align:right;"><?php esc_html_e('Actions', 'vgt-sentinel'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($bans as $b): ?>
-                        <tr>
-                            <td><code><?php echo esc_html((string)$b->ip); ?></code></td>
-                            <td><code><?php echo esc_html((string)$b->banned_at); ?></code></td>
-                            <td><strong style="color: #fb7185;"><?php echo esc_html((string)($b->reason ?? 'POLICY_VIOLATION')); ?></strong></td>
-                            <td style="text-align:right;">
-                                <form method="post" action="" style="display:inline;">
-                                    <?php wp_nonce_field('vis_unban_ip_action'); ?>
-                                    <input type="hidden" name="unban_ip" value="<?php echo esc_attr((string)$b->ip); ?>">
-                                    <button type="submit" name="vis_unban_ip_submit" value="1" style="background:rgba(251,113,133,0.1); border:1px solid #fb7185; color:#fecdd3; border-radius:6px; padding:6px 10px; cursor:pointer; font:700 10px monospace;">
-                                        <?php esc_html_e('ENTSPERREN', 'vgt-sentinel'); ?>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-    </section>
 
-    <!-- SECTION 2: MANUAL BAN ENFORCEMENT -->
-    <section id="cerb-manual" class="vgt-titan-panel">
-        <div class="vgt-titan-panel-head">
-            <div>
-                <small><?php esc_html_e('02 / DIRECT INTERVENTION', 'vgt-sentinel'); ?></small>
-                <h3><?php esc_html_e('Manuelle IP-Sperre einrichten', 'vgt-sentinel'); ?></h3>
+            <p style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
+                <?php esc_html_e('Gestalten Sie eine professionelle Unternehmens-Landing-Page als Sperranzeige: Hinterlegen Sie Ihr Firmen-Logo, ein individuelles Hintergrundbild, Unternehmens-Vorstellung ("Wer wir sind & was wir machen"), Kernleistungen/USPs sowie Direkt-Kontaktdaten. Darunter erscheint transparent die Sicherheitsbox mit Vorgangsdaten und 1-Click-Kopierfunktion zur schnellen Deeskalation und Entsperrung.', 'vgt-sentinel'); ?>
+            </p>
+
+            <form method="post" action="">
+                <?php wp_nonce_field('vis_cerberus_branding_action'); ?>
+                
+                <!-- TOGGLE CARD -->
+                <div style="margin-bottom: 24px; padding: 18px; background: rgba(0, 229, 255, 0.04); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                        <input type="checkbox" name="vis_branding[enabled]" value="1" <?php checked(!empty($branding['enabled'])); ?>>
+                        <strong style="color: #f0f3f8; font-size: 14px;"><?php esc_html_e('Corporate Landing-Page als Sperranzeige aktivieren', 'vgt-sentinel'); ?></strong>
+                    </label>
+                    <small style="display:block; color:#94a3b8; margin-top:4px; margin-left: 28px;">
+                        <?php esc_html_e('Wenn aktiviert, wird sowohl bei Cerberus-Sperren als auch bei Prometheus-Strikes Ihre vollständige Unternehmens-Landing-Page mit Kontaktdaten und darunterliegender Sicherheits-Box angezeigt.', 'vgt-sentinel'); ?>
+                    </small>
+                </div>
+
+                <!-- CARD 1: VISUELLE IDENTITÄT -->
+                <div style="margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;">
+                    <h4 style="margin: 0 0 16px 0; color: #00e5ff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                        <span>🎨</span> <?php esc_html_e('1. Design & Visuelle Identität', 'vgt-sentinel'); ?>
+                    </h4>
+                    <div class="vgt-titan-fields">
+                        <label>
+                            <span><?php esc_html_e('Firmen-Logo URL (Optional)', 'vgt-sentinel'); ?></span>
+                            <input type="url" name="vis_branding[logo_url]" value="<?php echo esc_attr((string)($branding['logo_url'] ?? '')); ?>" placeholder="https://example.com/wp-content/uploads/logo.svg">
+                            <small style="color:#64748b; font-size:11px;"><?php esc_html_e('SVG oder transparentes PNG empfohlen.', 'vgt-sentinel'); ?></small>
+                        </label>
+
+                        <label>
+                            <span><?php esc_html_e('Hintergrundbild URL (Optional)', 'vgt-sentinel'); ?></span>
+                            <input type="url" name="vis_branding[bg_image_url]" value="<?php echo esc_attr((string)($branding['bg_image_url'] ?? '')); ?>" placeholder="https://example.com/wp-content/uploads/bg-office.jpg">
+                            <small style="color:#64748b; font-size:11px;"><?php esc_html_e('Büro-, Gebäude- oder Marken-Headerbild (wird mit Overlay abgedunkelt).', 'vgt-sentinel'); ?></small>
+                        </label>
+
+                        <label>
+                            <span><?php esc_html_e('Hintergrund-Abdunkelung (%)', 'vgt-sentinel'); ?></span>
+                            <input type="number" name="vis_branding[bg_overlay_opacity]" min="30" max="98" step="1" value="<?php echo esc_attr((string)($branding['bg_overlay_opacity'] ?? 85)); ?>">
+                            <small style="color:#64748b; font-size:11px;"><?php esc_html_e('30% bis 98% (Standard: 85% für optimale Lesbarkeit).', 'vgt-sentinel'); ?></small>
+                        </label>
+
+                        <label>
+                            <span><?php esc_html_e('Akzent- & Markenfarbe (Hex)', 'vgt-sentinel'); ?></span>
+                            <input type="text" name="vis_branding[accent_color]" value="<?php echo esc_attr((string)($branding['accent_color'] ?? '#00e5ff')); ?>" placeholder="#00e5ff">
+                            <small style="color:#64748b; font-size:11px;"><?php esc_html_e('Farbe für Buttons, Icons und Highlights.', 'vgt-sentinel'); ?></small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CARD 2: UNTERNEHMENSPRÄSENTATION -->
+                <div style="margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;">
+                    <h4 style="margin: 0 0 16px 0; color: #5eead4; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                        <span>🏢</span> <?php esc_html_e('2. Unternehmens-Präsentation ("Wer wir sind & Was wir machen")', 'vgt-sentinel'); ?>
+                    </h4>
+                    <div class="vgt-titan-fields">
+                        <label>
+                            <span><?php esc_html_e('Browser Seitentitel (HTML Title)', 'vgt-sentinel'); ?></span>
+                            <input type="text" name="vis_branding[page_title]" value="<?php echo esc_attr((string)($branding['page_title'] ?? '')); ?>" placeholder="z. B. BaufiFair Kundenzugang & Support">
+                        </label>
+
+                        <label>
+                            <span><?php esc_html_e('Unternehmensname / Firmenname', 'vgt-sentinel'); ?></span>
+                            <input type="text" name="vis_branding[company_name]" value="<?php echo esc_attr((string)($branding['company_name'] ?? get_bloginfo('name'))); ?>" placeholder="z. B. BaufiFair GmbH">
+                        </label>
+
+                        <label style="grid-column: 1 / -1;">
+                            <span><?php esc_html_e('Slogan / Claim / Untertitel', 'vgt-sentinel'); ?></span>
+                            <input type="text" name="vis_branding[company_tagline]" value="<?php echo esc_attr((string)($branding['company_tagline'] ?? '')); ?>" placeholder="z. B. Ihr vertrauensvoller Partner für maßgeschneiderte Immobilienfinanzierung">
+                        </label>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <label>
+                            <span style="display:block; margin-bottom: 6px; font-weight: 600; color: #f0f3f8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                                <?php esc_html_e('Wer wir sind & Was wir machen (Unternehmensbeschreibung)', 'vgt-sentinel'); ?>
+                            </span>
+                            <textarea name="vis_branding[company_description]" rows="3" class="vgt-titan-textarea" style="width: 100%; background: #06070a; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f0f3f8; padding: 10px; font-size: 13px;" placeholder="z. B. Wir begleiten Privatkunden und Investoren unabhängig und transparent bei der Verwirklichung ihrer Bau- und Kaufvorhaben. Als führender Spezialist vergleichen wir über 500 Bankpartner bundesweit für Ihre optimale Kondition."><?php echo esc_textarea((string)($branding['company_description'] ?? '')); ?></textarea>
+                        </label>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <label>
+                            <span style="display:block; margin-bottom: 6px; font-weight: 600; color: #f0f3f8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                                <?php esc_html_e('Kernkompetenzen / USPs (Eine Zeile pro Punkt)', 'vgt-sentinel'); ?>
+                            </span>
+                            <textarea name="vis_branding[company_features]" rows="3" class="vgt-titan-textarea" style="width: 100%; background: #06070a; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f0f3f8; padding: 10px; font-size: 13px;" placeholder="Über 500 renommierte Bank- und Finanzpartner im Direktvergleich&#10;100% kostenlose und unabhängige Konditionsprüfung&#10;Persönlicher Ansprechpartner mit schneller Reaktionszeit"><?php echo esc_textarea((string)($branding['company_features'] ?? '')); ?></textarea>
+                            <small style="color:#64748b; font-size:11px;"><?php esc_html_e('Wird auf der Sperrseite als elegante Feature-Karten gerendert.', 'vgt-sentinel'); ?></small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CARD 3: DIREKTKONTAKT & SERVICE-HUB -->
+                <div style="margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;">
+                    <h4 style="margin: 0 0 16px 0; color: #38bdf8; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                        <span>📞</span> <?php esc_html_e('3. Direktkontakt & Service-Hotline', 'vgt-sentinel'); ?>
+                    </h4>
+                    <div class="vgt-titan-fields">
+                        <label>
+                            <span><?php esc_html_e('Support-Hotline / Telefonnummer', 'vgt-sentinel'); ?></span>
+                            <input type="text" name="vis_branding[support_phone]" value="<?php echo esc_attr((string)($branding['support_phone'] ?? '')); ?>" placeholder="z. B. +49 (0) 30 12345678">
+                            <small style="color:#64748b; font-size:11px;"><?php esc_html_e('Wird auf Smartphones und Tablets als direkter One-Tap-Anrufbutton gerendert.', 'vgt-sentinel'); ?></small>
+                        </label>
+
+                        <label>
+                            <span><?php esc_html_e('Support-E-Mail-Adresse', 'vgt-sentinel'); ?></span>
+                            <input type="email" name="vis_branding[support_email]" value="<?php echo esc_attr((string)($branding['support_email'] ?? get_option('admin_email'))); ?>" placeholder="z. B. kontakt@baufifair.de">
+                            <small style="color:#64748b; font-size:11px;"><?php esc_html_e('Klick öffnet Mail-Client mit bereits vorausgefüllter Incident-Referenz.', 'vgt-sentinel'); ?></small>
+                        </label>
+
+                        <label>
+                            <span><?php esc_html_e('Standort / Postanschrift', 'vgt-sentinel'); ?></span>
+                            <input type="text" name="vis_branding[company_address]" value="<?php echo esc_attr((string)($branding['company_address'] ?? '')); ?>" placeholder="z. B. Musterstraße 12, 10115 Berlin">
+                        </label>
+
+                        <label>
+                            <span><?php esc_html_e('Erreichbarkeit / Bürozeiten', 'vgt-sentinel'); ?></span>
+                            <input type="text" name="vis_branding[business_hours]" value="<?php echo esc_attr((string)($branding['business_hours'] ?? '')); ?>" placeholder="z. B. Mo. - Fr.: 08:30 - 18:00 Uhr">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CARD 4: SICHERHEITS- & DEESKALATIONSHINWEIS -->
+                <div style="margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;">
+                    <h4 style="margin: 0 0 16px 0; color: #fb7185; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                        <span>🛡</span> <?php esc_html_e('4. Deeskalations-Hinweis unterhalb der Unternehmensdaten', 'vgt-sentinel'); ?>
+                    </h4>
+                    <label>
+                        <span style="display:block; margin-bottom: 6px; font-weight: 600; color: #f0f3f8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">
+                            <?php esc_html_e('Beruhigende Kunden-Mitteilung in der Sicherheits-Box', 'vgt-sentinel'); ?>
+                        </span>
+                        <textarea name="vis_branding[custom_security_note]" rows="3" class="vgt-titan-textarea" style="width: 100%; background: #06070a; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #f0f3f8; padding: 10px; font-size: 13px;" placeholder="z. B. Unser automatisiertes Sicherheitssystem schützt unsere Infrastruktur vor bösartigen Angriffen. Sollten Sie diese Meldung fälschlicherweise erhalten haben, rufen Sie uns gerne an oder kopieren Sie die Vorgangs-ID unten in eine E-Mail – wir schalten Sie sofort frei."><?php echo esc_textarea((string)($branding['custom_security_note'] ?? ($branding['custom_notice'] ?? ''))); ?></textarea>
+                        <small style="color:#64748b; font-size:11px;"><?php esc_html_e('Dieser Text wird innerhalb der transparenten Sicherheits-Box direkt über den technischen Details angezeigt.', 'vgt-sentinel'); ?></small>
+                    </label>
+                </div>
+
+                <div class="vgt-titan-actions" style="margin-top: 24px;">
+                    <button type="submit" name="vis_cerberus_branding_submit" value="1" style="background: linear-gradient(135deg, #00e5ff 0%, #0077b6 100%); color: #06070a; font-weight: 800; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; letter-spacing: 1px; font-size: 13px;">
+                        <?php esc_html_e('LANDING-PAGE PERSONALISIERUNG SPEICHERN', 'vgt-sentinel'); ?>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+    <?php else: ?>
+        <!-- SECTION 1: ACTIVE THREAT ROSTER -->
+        <section id="cerb-roster" class="vgt-titan-panel">
+            <div class="vgt-titan-panel-head">
+                <div>
+                    <small><?php esc_html_e('01 / PERIMETER MATRIX', 'vgt-sentinel'); ?></small>
+                    <h3><?php esc_html_e('Active Threat Roster & In-Memory Bans', 'vgt-sentinel'); ?></h3>
+                </div>
+                <span class="vgt-titan-badge"><?php echo esc_html((string)$total_bans); ?> <?php esc_html_e('ACTIVE BANS', 'vgt-sentinel'); ?></span>
             </div>
-        </div>
-        <form method="post" action="">
-            <?php wp_nonce_field('vis_manual_ban_action'); ?>
-            <div class="vgt-titan-fields">
-                <label>
-                    <span><?php esc_html_e('IP-Adresse (IPv4 oder IPv6)', 'vgt-sentinel'); ?></span>
-                    <input type="text" name="ban_ip" placeholder="203.0.113.42" required autocomplete="off">
-                </label>
-                <label>
-                    <span><?php esc_html_e('Ban Dauer', 'vgt-sentinel'); ?></span>
-                    <select name="ban_duration" class="vgt-titan-select">
-                        <option value="900"><?php esc_html_e('15 Minuten (Kurzzeit / XDR)', 'vgt-sentinel'); ?></option>
-                        <option value="3600"><?php esc_html_e('1 Stunde', 'vgt-sentinel'); ?></option>
-                        <option value="86400" selected><?php esc_html_e('24 Stunden (Standard)', 'vgt-sentinel'); ?></option>
-                        <option value="604800"><?php esc_html_e('7 Tage', 'vgt-sentinel'); ?></option>
-                        <option value="31536000"><?php esc_html_e('Permanent (1 Jahr)', 'vgt-sentinel'); ?></option>
-                    </select>
-                </label>
-                <label>
-                    <span><?php esc_html_e('Begründung / Notiz', 'vgt-sentinel'); ?></span>
-                    <input type="text" name="ban_reason" placeholder="Manual security exclusion">
-                </label>
+
+            <?php if (empty($bans)): ?>
+                <div class="vgt-titan-empty" style="padding: 24px 0; color: #5eead4; text-align: center;">
+                    <?php esc_html_e('PERIMETER CLEAN — Keine aktiven IP-Sperren im Opcache verzeichnet.', 'vgt-sentinel'); ?>
+                </div>
+            <?php else: ?>
+                <div class="vgt-titan-table-wrap">
+                    <table class="vgt-titan-table">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e('IP-Adresse', 'vgt-sentinel'); ?></th>
+                                <th><?php esc_html_e('Banned At', 'vgt-sentinel'); ?></th>
+                                <th><?php esc_html_e('Reason / Origin', 'vgt-sentinel'); ?></th>
+                                <th style="text-align:right;"><?php esc_html_e('Actions', 'vgt-sentinel'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($bans as $b): ?>
+                            <tr>
+                                <td><code><?php echo esc_html((string)$b->ip); ?></code></td>
+                                <td><code><?php echo esc_html((string)$b->banned_at); ?></code></td>
+                                <td><strong style="color: #fb7185;"><?php echo esc_html((string)($b->reason ?? 'POLICY_VIOLATION')); ?></strong></td>
+                                <td style="text-align:right;">
+                                    <form method="post" action="" style="display:inline;">
+                                        <?php wp_nonce_field('vis_unban_ip_action'); ?>
+                                        <input type="hidden" name="unban_ip" value="<?php echo esc_attr((string)$b->ip); ?>">
+                                        <button type="submit" name="vis_unban_ip_submit" value="1" style="background:rgba(251,113,133,0.1); border:1px solid #fb7185; color:#fecdd3; border-radius:6px; padding:6px 10px; cursor:pointer; font:700 10px monospace;">
+                                            <?php esc_html_e('ENTSPERREN', 'vgt-sentinel'); ?>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <!-- SECTION 2: MANUAL BAN ENFORCEMENT -->
+        <section id="cerb-manual" class="vgt-titan-panel">
+            <div class="vgt-titan-panel-head">
+                <div>
+                    <small><?php esc_html_e('02 / DIRECT INTERVENTION', 'vgt-sentinel'); ?></small>
+                    <h3><?php esc_html_e('Manuelle IP-Sperre einrichten', 'vgt-sentinel'); ?></h3>
+                </div>
             </div>
-            <div class="vgt-titan-actions">
-                <button type="submit" name="vis_manual_ban_submit" value="1"><?php esc_html_e('IP SOFORT SPERREN', 'vgt-sentinel'); ?></button>
-            </div>
-        </form>
-    </section>
+            <form method="post" action="">
+                <?php wp_nonce_field('vis_manual_ban_action'); ?>
+                <div class="vgt-titan-fields">
+                    <label>
+                        <span><?php esc_html_e('IP-Adresse (IPv4 oder IPv6)', 'vgt-sentinel'); ?></span>
+                        <input type="text" name="ban_ip" placeholder="203.0.113.42" required autocomplete="off">
+                    </label>
+                    <label>
+                        <span><?php esc_html_e('Ban Dauer', 'vgt-sentinel'); ?></span>
+                        <select name="ban_duration" class="vgt-titan-select">
+                            <option value="900"><?php esc_html_e('15 Minuten (Kurzzeit / XDR)', 'vgt-sentinel'); ?></option>
+                            <option value="3600"><?php esc_html_e('1 Stunde', 'vgt-sentinel'); ?></option>
+                            <option value="86400" selected><?php esc_html_e('24 Stunden (Standard)', 'vgt-sentinel'); ?></option>
+                            <option value="604800"><?php esc_html_e('7 Tage', 'vgt-sentinel'); ?></option>
+                            <option value="31536000"><?php esc_html_e('Permanent (1 Jahr)', 'vgt-sentinel'); ?></option>
+                        </select>
+                    </label>
+                    <label>
+                        <span><?php esc_html_e('Begründung / Notiz', 'vgt-sentinel'); ?></span>
+                        <input type="text" name="ban_reason" placeholder="Manual security exclusion">
+                    </label>
+                </div>
+                <div class="vgt-titan-actions">
+                    <button type="submit" name="vis_manual_ban_submit" value="1"><?php esc_html_e('IP SOFORT SPERREN', 'vgt-sentinel'); ?></button>
+                </div>
+            </form>
+        </section>
+    <?php endif; ?>
 </section>
+

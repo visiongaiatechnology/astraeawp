@@ -30,6 +30,7 @@ final class VaultTest extends TestCase {
         self::testPrePluginRecoveryGateExecution();
         self::testHeaderPolicySafeDefaults();
         self::testLoggerUriSanitization();
+        self::testVaultStepUpGuardAndInPlaceElevation();
 
         echo "  -> VaultTest completed.\n";
     }
@@ -197,5 +198,42 @@ final class VaultTest extends TestCase {
         self::assertFalse(str_contains($cleanUri, '12345'), 'Logger must redact nonce query value');
         self::assertStringContains('tab=overview', $cleanUri, 'Logger must preserve non-sensitive query parameters');
         self::assertStringContains('token=%5BREDACTED%5D', $cleanUri, 'Logger must mark sensitive keys as [REDACTED]');
+    }
+
+    private static function testVaultStepUpGuardAndInPlaceElevation(): void {
+        $userId = get_current_user_id();
+        \Astraea\Auth\StepUpAuthService::clearStepUp($userId);
+        unset($_POST['astraea_stepup_password']);
+
+        $reflector = new \ReflectionClass(\Astraea\Vault\Admin\AdminActions::class);
+        $method = $reflector->getMethod('requireStepUp');
+        $actions = $reflector->newInstanceWithoutConstructor();
+
+        // 1. Un-elevated session without password must trigger wp_die (throws RuntimeException in test runner)
+        $caught = false;
+        $errorMsg = '';
+        try {
+            $method->invoke($actions, 'vault:initialize');
+        } catch (\RuntimeException $e) {
+            $caught = true;
+            $errorMsg = $e->getMessage();
+        }
+        self::assertTrue($caught, 'requireStepUp must block un-elevated session via wp_die');
+        self::assertStringContains('Current-session re-authentication is required', $errorMsg, 'wp_die message must guide to Security Sessions');
+
+        // 2. Elevated session must succeed smoothly
+        \Astraea\Auth\StepUpAuthService::recordStepUp($userId);
+        self::assertTrue(\Astraea\Auth\StepUpAuthService::isStepUpActive($userId), 'Step-Up must be active');
+        $passed = false;
+        try {
+            $method->invoke($actions, 'vault:initialize');
+            $passed = true;
+        } catch (\Throwable $e) {
+            $passed = false;
+        }
+        self::assertTrue($passed, 'requireStepUp must succeed when session is elevated');
+
+        // Cleanup
+        \Astraea\Auth\StepUpAuthService::clearStepUp($userId);
     }
 }

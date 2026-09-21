@@ -164,6 +164,9 @@ class VIS_Dashboard_View {
 
         echo '<header class="vis-topbar">
                 <div class="vis-topbar-left">
+                    <button type="button" class="vis-nav-toggle" id="vis-mobile-nav-toggle" aria-label="' . esc_attr__('Menü umschalten', 'vgt-sentinel') . '" aria-expanded="false">
+                        <span></span><span></span><span></span>
+                    </button>
                     <div class="vis-breadcrumb">
                         <span>GE-DEFENSE</span> / <span class="active">' . esc_html($title) . '</span>
                     </div>

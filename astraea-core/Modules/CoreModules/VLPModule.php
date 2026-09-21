@@ -28,7 +28,7 @@ final class VLPModule extends BaseModule {
             requiredCapabilities: ['manage_options'],
             migrationVersion: '1.0.0',
             securityEventNamespace: 'VLP',
-            adminRoute: 'astraea-vlp-settings',
+            adminRoute: 'astraea-vlp-light',
             isToggleable: true,
             description: 'Kernel-native consent receipt ledger, DOM gatekeeper, asset scanner, and privacy enforcement.',
             compatibilityInfo: ['consent_format' => 'jwt_hmac']

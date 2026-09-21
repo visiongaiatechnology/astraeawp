@@ -180,7 +180,12 @@ final class Styx {
         foreach ($trace as $step) {
             if (!isset($step['file'])) continue;
             
-            $file = wp_normalize_path($step['file']);
+            $file = function_exists('wp_normalize_path') ? wp_normalize_path((string)$step['file']) : str_replace('\\', '/', (string)$step['file']);
+            
+            // Threat Intelligence Subsystem Erkennung
+            if (str_contains($file, 'class-vis-threat-intel.php') || str_contains($file, 'threat-intel')) {
+                return 'THREAT_INTEL';
+            }
             
             if (str_starts_with($file, $plugin_dir)) {
                 $rel_path = trim(str_replace($plugin_dir, '', $file), '/');

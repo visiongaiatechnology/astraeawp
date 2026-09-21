@@ -45,6 +45,7 @@ The manuals and architecture documentation are intentionally stored in the **rep
 | 🔄 **[UPDATE_SECURITY.md](./UPDATE_SECURITY.md)** | Update-chain and release verification design |
 | 🚚 **[MIGRATION.md](./MIGRATION.md)** | Migration from conventional WordPress |
 | 🧩 **[COMPATIBILITY.md](./COMPATIBILITY.md)** | Runtime and plugin compatibility notes |
+| 📋 **[CHANGELOG.md](./CHANGELOG.md)** | Complete version history & release notes |
 
 ---
 
@@ -1188,6 +1189,120 @@ AstraeaOS Alpha development intentionally includes:
 - compatibility tests.
 
 New security findings should become regression tests whenever practical.
+
+---
+
+# 📋 Changelog & Release History
+
+A full record of all major milestones, architectural evolutions, and security hardening throughout the AstraeaOS WordPress Edition lifecycle. For granular commit-level diffs, refer to **[CHANGELOG.md](./CHANGELOG.md)**.
+
+### Release Timeline Overview
+
+| Release | Codename / Focus | Key Highlights | Status |
+|---|---|---|---|
+| **`0.6.0-alpha`** | **Sovereign Defense & Infrastructure Fabric** | GeDefense 8.2.4 (9 threat feeds, 3.10 µs IP swap, 10 HUD probes), Ingress & Anti-Polyglot hardening, Submenu & Cockpit UI fixes, Vault Step-Up in-place auth, 17 First-Party Kernel Modules, Secure Genesis | 🟢 Current Release |
+| **`0.5.0-alpha`** | **Astraea Mail Gateway** | Zero-dependency SMTP, OAuth 2.0 Modern Auth (M365/Google), AEAD encrypted credentials (`MAIL_TRANSPORT`), StrictTLS 1.2/1.3, DKIM signing, SSRF circuit breaker | 🔒 Superseded |
+| **`0.4.0-alpha`** | **Privacy & Consent Fabric** | VLP Light, Astraea Keyring consent receipts (`VLP_CONSENT`), server-side HTML Tag Processor gate, local anonymous Dattrack telemetry | 🔒 Superseded |
+| **`0.3.1-alpha`** | **Glass Consistency Sweep** | Scoped Legacy Surface Adapter for wp-admin, dark glass tokens, modern setup & installation experience without external CDNs | 🔒 Superseded |
+| **`0.3.0-alpha`** | **Stable-Alpha Hardening** | Session-bound Step-Up auth, evidence-only Security Event pipeline, core-native Vault, Ed25519 release verification | 🔒 Superseded |
+| **`0.2.0-alpha`** | **Glass Admin Experience** | Astraea metallic emblem, modular token architecture, categorized navigation, Command Palette (`Ctrl+K`), Mission Control Center, Glass Login Portal | 🔒 Superseded |
+| **`0.1.0-alpha`** | **Architecture & Security Foundation** | PHP 8.3+, MySQL 8.0+, Argon2id password security with transparent legacy rehash, AEAD cryptography (libsodium/OpenSSL), Master Key HKDF, Composite DB indices | 🔒 Superseded |
+
+---
+
+## 🚀 0.6.0-alpha — Sovereign Defense & Infrastructure Fabric (Latest)
+
+### 🛡️ GeDefense 8.2.4 Multi-Layer Defense & Threat Intelligence
+- **GeDefense Engine 8.2.4**: Boot-time pre-flight security engine uniting Cerberus L0 wire-speed ingress filtering, Zeus WAF, Aegis DPI, and Hades active perimeter protection.
+- **9 Real-Time Threat Intelligence Feeds**: Native ingestion and synchronous filtering against AlienVault OTX, AbuseIPDB, URLhaus, ThreatFox, Feodo Tracker, Blocklist.de, Emerging Threats, Tor Exit Nodes, and PhishTank.
+- **3.10 µs IP Binary Swap Engine**: Ultra-low-latency binary search IP classification executing sub-4-microsecond ingress drop/allow decisions directly in the boot path.
+- **10 Real-Time HUD Probes**: Live telemetry probes providing real-time instrumentation for memory headroom, L0 drops, WAF blocks, crypto state, and active perimeter health.
+- **Security Event Audit Ring Buffer**: In-memory ring buffer capturing cryptographically bound security incidents with zero sensitive-data leakage.
+
+### 🖼️ Media Ingress & Anti-Polyglot Hardening
+- **Multi-Stage Upload Pipeline**: Deep validation verifying file signatures against integer-constant MIME definitions (`IMAGETYPE_*`).
+- **Active SVG Sanitization**: XML/SVG security parser eliminating inline scripts, event attributes (`onload`, `onerror`), XML External Entities (XXE), and CDATA exploit vectors.
+- **Binary Metadata Stripping & Re-Encoding**: Strips sensitive EXIF geolocation metadata; performs GD re-encoding to neutralize polyglot payload carriers.
+- **WebP & AVIF Capability Auto-Negotiation**: Automatic server capability probing and modern format delivery.
+
+### 💎 Astraea Glass UI & Navigation Modernization
+- **GeDefense WP View Cockpit Layout**: 48px glass topbar alignment, zero-padding viewport fit, and responsive sidebar anchoring.
+- **Submenu Displacement Resolution**: Repaired `isSidebarFolded` logic in `astraea-admin.js` to evaluate actual responsive viewport bounds (`<= 960 && > 782`), preventing WordPress core's automatic `body.auto-fold` class from incorrectly triggering detached top-floating flyout menus on desktop viewports.
+- **Submenu Blue Hover Block Elimination**: Neutralized `#adminmenu li` hover/active backgrounds to `transparent !important;` in `astraea-shell.css`, preventing aggressive `#3858e9` blue block artifacts while preserving high-contrast glass pill highlights.
+- **Inline Accordion Docking**: Anchored submenus directly beneath their parent menu items with `position: relative !important; top: 0 !important; margin-top: 2px !important;` across all administrative screens.
+- **Touch Targets**: Enforced flex display and 40px minimum touch target height on `.menu-top` links.
+
+### 🔐 Astraea Vault & Step-Up Authentication
+- **Step-Up Authentication Enforcement**: Guarded privileged operations via `StepUpAuthService::guardSensitiveAction()`.
+- **Vault Setup Graceful Flow**: Resolved `Fatal error: Uncaught Astraea\Exceptions\SecurityException` when provisioning new Vaults or Backup Vaults through an interactive in-place password modal and fallback redirect handlers.
+
+### 🧩 17 First-Party Kernel Modules ("WordPress without the Plugin Stack")
+1. **Astraea Module Fabric** (`astraea-core/Modules/`): DAG topological module boot sequence, Kahn's cycle detection, and live `ModuleHealth` probes.
+2. **Astraea Update Engine** (`astraea-core/Update/`): Ed25519 detached manifest verification, SHA-256 validation, path-jailed extraction, and pre-update Vault snapshots.
+3. **Upstream WordPress Shield** (`CoreUpdateGuard`): Blocks `api.wordpress.org` core version checks to prevent unverified upstream overwrites.
+4. **Autonomous Recovery Gate & Console** (`astraea-core/Recovery/`): 3-strike boot crash loop prevention, standalone zero-WordPress-plugin emergency admin console with Master recovery key authentication.
+5. **WordPress → Astraea Migration Wizard** (`astraea-core/Migration/`): Safe onboarding flow auditing environment, mapping 20+ redundant infrastructure plugins, and taking pre-migration snapshots.
+6. **Astraea Performance Engine** (`astraea-core/Performance/`): Disk-backed page cache with locked writes, VLP consent variation awareness, strict cache-control and immutable asset headers, native lazy-loading, and database autoload profiler.
+7. **Astraea Media Engine** (`astraea-core/Media/`): Hardened multi-stage upload pipeline, integer-constant MIME validation, XML SVG sanitization, and EXIF stripping.
+8. **Astraea Redirect Manager** (`astraea-core/Redirects/`): ReDoS-immune matching, loop/chain detection up to depth 5, automatic post slug change watcher, and privacy-preserving 404 monitor without raw IP storage.
+9. **Astraea SEO Essentials** (`astraea-core/SEO/`): Conflict-aware technical metadata, canonical URLs, OpenGraph/Twitter cards, and JSON-LD Schema (WebSite, Org, Article).
+10. **Astraea Forms Light** (`astraea-core/Forms/`): Accessible frontend form controls, honeypot spam trap, IP rate limiter, CSRF nonce protection, and authenticated AEAD encrypted submission storage under dedicated `FORMS_SUBMISSION` cryptographic domain.
+11. **Astraea Task Center** (`astraea-core/Tasks/`): WP-Cron and Astraea task inspection, delay detection (>10m warning), high-frequency schedule monitoring, and manual task execution triggers.
+12. **Astraea Database Maintenance** (`astraea-core/Database/`): Dry-run byte analysis, revision/spam/transient cleanup, mandatory pre-cleanup Vault snapshot, and Step-Up authentication.
+13. **Astraea Maintenance Mode** (`astraea-core/Maintenance/`): SEO-safe 503 maintenance mode with `Retry-After` headers, administrator bypass, and standalone zero-CDN glassmorphism template.
+14. **Astraea Identity Center** (`astraea-core/Auth/IdentityCenter.php`): Active session inspector, remote session revocation, IP-hashed login history, and truthful WebAuthn status reporting.
+15. **Astraea Compatibility Layer** (`astraea-core/Compatibility/`): Granular compatibility flags (`LEGACY_XMLRPC`, `RELAX_REST_AUTH`, `ALLOW_PHP_MAILER`) following the "minimum effective exception" doctrine.
+16. **WP-CLI Management Suite** (`astraea-core/CLI/AstraeaCommand.php`): CLI subcommands for `status`, `modules`, `health`, `integrity verify`, `vault list/verify`, `recovery status`, and `update check/apply`.
+17. **Secure Genesis**: Transactional security compilation replacing default `wp_install()`, randomized DB prefix, owner-only `wp-config.php`, out-of-webroot keyring & master key, ThroneGuard privilege separation, and Argon2id salts.
+
+---
+
+## 📦 0.5.0-alpha — Astraea Mail Gateway
+- **Native SMTP Transport**: Kernel-native, zero-external-dependency SMTP configuration and routing with provider presets and custom SMTP support.
+- **AEAD Encrypted Profiles**: Entire SMTP profile, credentials, diagnostics, and delivery journal encrypted under dedicated `MAIL_TRANSPORT` cryptographic domain.
+- **Strict TLS & Modern Auth**: STARTTLS/SMTPS with strict certificate and hostname verification; native XOAUTH2 support for Microsoft 365 and Google Modern Auth without external OAuth libraries.
+- **Defensive Networking**: Endpoint SSRF policy, circuit breaker, delivery journal telemetry, and optional DKIM signing.
+
+---
+
+## 🍪 0.4.0-alpha — Privacy & Consent Fabric
+- **VLP (VisionLegalPro) Light**: Kernel-native cookie and consent management with authenticated consent receipts stored via Astraea Keyring (`VLP_CONSENT` domain).
+- **Dual-Layer Resource Gate**: Server-side HTML Tag Processor gate combined with a synchronous client-side DOM insertion interceptor for third-party scripts.
+- **VGT Dattrack Light**: Fully local, privacy-first analytics with same-origin validation, daily pseudonymous HMAC identifiers, and AEAD encryption. Zero external trackers.
+
+---
+
+## 🎨 0.3.1-alpha — Astraea Glass Consistency Sweep
+- **Scoped Legacy Surface Adapter**: Unified WordPress core admin screens (tables, settings, comments, notices) with dark obsidian and cyan glass design tokens without DOM rewriting.
+- **Modernized Installer Experience**: Redesigned `setup-config.php` and `install.php` with native glass aesthetics, zero external CDNs, and complete responsive styling.
+
+---
+
+## 🔒 0.3.0-alpha — Stable-Alpha Hardening
+- **Step-Up Authentication**: Session-bound step-up authentication integrated into privileged actions.
+- **Security Event Pipeline**: Evidence-only Security Event Fabric connecting GeDefense, Vault, FileGuard, and Integrity monitors.
+- **Core-Native Astraea Vault**: Idempotent schema, robust storage initialization, and Multisite network-plugin quarantine.
+- **Cryptographic Verification Split**: Local file integrity separated from offline Ed25519 release authenticity signing.
+
+---
+
+## 🖥️ 0.2.0-alpha — Phase 2: Glass Admin Experience
+- **Official Astraea Identity**: Metallic cyan Astraea emblem integrated across Topbar, Mission Control Center, and Auth Portal.
+- **WordPress Branding Eradication**: Removed WordPress titles, admin bar logos, and legacy footer credits in favor of system telemetry.
+- **Astraea Glass Design System**: 3-tier glassmorphism system (L1/L2/L3), obsidian dark palette, modular CSS token architecture, and reduced motion support.
+- **Command Palette (`Ctrl+K` / `Cmd+K`)**: Global fuzzy search across admin screens, navigation, system actions, and content shortcuts.
+- **Mission Control Center**: Real-time Engine Telemetry (PHP, DB, Memory, OpCache) and GeDefense Security HUD.
+- **Notification Drawer & Glass Login**: Non-destructive toast buffering and space-obsidian glass authentication portal.
+
+---
+
+## 🏗️ 0.1.0-alpha — Architecture & Security Foundation
+- **Modern Runtime Baseline**: PHP >= 8.3 (64-bit), MySQL >= 8.0 / MariaDB >= 10.11, strict extensions (`ext-sodium`, `ext-openssl`, `ext-mbstring`, `ext-intl`).
+- **Argon2id Security**: Native `PASSWORD_ARGON2ID` hashing with adaptive cost and automatic "Verify Legacy → Rehash Modern" migration from MD5, phpass, and Bcrypt.
+- **Cryptographic Core**: High-throughput AEAD (`XChaCha20-Poly1305` and `AES-256-GCM`) with HKDF-SHA256 master key derivation and domain separation.
+- **Database Modernization**: Composite B-tree indexes on `postmeta` and `usermeta`; versioned migration engine.
+- **FileGuard & HTTP Baseline**: Magic-byte MIME detection, SVG threat parsing, double-extension blocking, and hardened HTTP headers (HSTS, `nosniff`, `SAMEORIGIN`).
+- **Initial GeDefense Integration**: Early perimeter firewall and pre-flight boot execution.
 
 ---
 

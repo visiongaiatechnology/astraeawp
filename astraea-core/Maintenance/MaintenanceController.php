@@ -79,6 +79,9 @@ final class MaintenanceController {
      * @return array<string, mixed>
      */
     public static function getConfig(): array {
+        if (!function_exists('get_option')) {
+            return [];
+        }
         $raw = get_option(self::OPTION_CONFIG, []);
         return is_array($raw) ? $raw : [];
     }
@@ -87,6 +90,9 @@ final class MaintenanceController {
      * @param array<string, mixed> $config
      */
     public static function updateConfig(array $config): void {
+        if (!function_exists('update_option')) {
+            return;
+        }
         update_option(self::OPTION_CONFIG, $config);
     }
 
@@ -96,7 +102,7 @@ final class MaintenanceController {
     public static function renderFrontendTemplate(array $config): void {
         $title = (string)($config['title'] ?? 'Scheduled Maintenance');
         $message = (string)($config['message'] ?? 'We are performing scheduled core maintenance to ensure optimal security and reliability. Please check back shortly.');
-        $siteName = get_bloginfo('name');
+        $siteName = function_exists('get_bloginfo') ? get_bloginfo('name') : 'AstraeaOS';
         ?>
         <!DOCTYPE html>
         <html lang="en">

@@ -455,6 +455,62 @@ final class SecurityProbeManager {
         ];
     }
 
+    /**
+     * Probe GeDefense Threat Intelligence Engine.
+     *
+     * @return array{status: HealthStatus, label: string, details: string, threats_count: int, feeds_active: int}
+     */
+    public static function probeThreatIntelligence(): array {
+        $className = '\\VisionGaia\\GeDefense\\Modules\\ThreatIntel\\ThreatIntelligence';
+        if (!class_exists($className)) {
+            return [
+                'status'        => HealthStatus::DISABLED,
+                'label'         => 'Unavailable',
+                'details'       => 'Threat Intelligence engine class not mounted.',
+                'threats_count' => 0,
+                'feeds_active'  => 0,
+            ];
+        }
+
+        try {
+            $instance = $className::instance();
+            $config = $instance->get_config();
+            $enabled = $instance->is_enabled();
+            $threatsCount = (int)($config['total_threats'] ?? 0);
+            $activeFeeds = is_array($config['active_feeds'] ?? null)
+                ? count(array_filter($config['active_feeds']))
+                : 0;
+
+            if (!$enabled) {
+                return [
+                    'status'        => HealthStatus::DISABLED,
+                    'label'         => 'Disabled (Opt-In)',
+                    'details'       => 'Threat Intelligence reputation feeds and egress blocking disabled by policy.',
+                    'threats_count' => $threatsCount,
+                    'feeds_active'  => $activeFeeds,
+                ];
+            }
+
+            $lastSync = $config['last_sync'] ?? null;
+            $syncTimeStr = is_numeric($lastSync) && $lastSync > 0 ? gmdate('Y-m-d H:i', (int)$lastSync) . ' UTC' : 'Never';
+
+            return [
+                'status'        => HealthStatus::HEALTHY,
+                'label'         => 'Active',
+                'details'       => sprintf('%d threats synced across %d feeds (Last sync: %s).', $threatsCount, $activeFeeds, $syncTimeStr),
+                'threats_count' => $threatsCount,
+                'feeds_active'  => $activeFeeds,
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'status'        => HealthStatus::WARNING,
+                'label'         => 'Degraded',
+                'details'       => 'Threat Intelligence probe encountered an unexpected runtime state.',
+                'threats_count' => 0,
+                'feeds_active'  => 0,
+            ];
+        }
+    }
 
     /** Compute aggregate system health state. */
     public static function getOverallStatus(): HealthStatus {
@@ -468,6 +524,7 @@ final class SecurityProbeManager {
             self::probeDatabase()['status'],
             self::probeManifestIntegrity()['status'],
             self::probeMorpheus()['status'],
+            self::probeThreatIntelligence()['status'],
         ];
         if (in_array(HealthStatus::CRITICAL, $probes, true)) return HealthStatus::CRITICAL;
         if (in_array(HealthStatus::WARNING, $probes, true)) return HealthStatus::WARNING;
@@ -706,6 +763,7 @@ final class SecurityProbeManager {
             self::probeCerberus()['status'], self::probeZeusCrypto()['status'], self::probeAegis()['status'],
             self::probeHttpSecurity()['status'], self::probeFileGuard()['status'], self::probeVault()['status'],
             self::probeDatabase()['status'], self::probeManifestIntegrity()['status'], self::probeMorpheus()['status'],
+            self::probeThreatIntelligence()['status'],
         ];
         $verified = $warnings = $notConfigured = 0;
         foreach ($probes as $st) {

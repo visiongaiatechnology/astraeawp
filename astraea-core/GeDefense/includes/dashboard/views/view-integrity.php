@@ -21,18 +21,6 @@ $last_scan = $has_report ? $report['timestamp'] : __('Never', 'vgt-sentinel');
 // CONSOLIDATE DUPLICATE ANOMALIES PER FILE
 if (!empty($changes) && is_array($changes)) {
     $consolidated = [];
-    $typeRank = static function(string $type): int {
-        return match (strtoupper($type)) {
-            'QUARANTINED' => 70,
-            'MALWARE' => 60,
-            'POLICY' => 50,
-            'SUSPICIOUS' => 40,
-            'DELETED', 'UNAVAILABLE' => 30,
-            'MODIFIED' => 20,
-            'NEW' => 10,
-            default => 0,
-        };
-    };
     foreach ($changes as $change) {
         if (!is_array($change)) continue;
         $file = (string)($change['file'] ?? '');
@@ -41,39 +29,20 @@ if (!empty($changes) && is_array($changes)) {
             $consolidated[$file] = $change;
         } else {
             $newType = strtoupper((string)($change['type'] ?? ''));
-            $oldType = strtoupper((string)($consolidated[$file]['type'] ?? ''));
-            if ($typeRank($newType) > $typeRank($oldType)) $consolidated[$file]['type'] = $newType;
+            if ($newType === 'MALWARE' || $newType === 'QUARANTINED') {
+                $consolidated[$file]['type'] = $newType;
+            }
             $consolidated[$file]['risk'] = max((int)($consolidated[$file]['risk'] ?? 0), (int)($change['risk'] ?? 0));
             $consolidated[$file]['confidence'] = max((int)($consolidated[$file]['confidence'] ?? 0), (int)($change['confidence'] ?? 0));
             $oldDesc = (string)($consolidated[$file]['desc'] ?? '');
             $newDesc = (string)($change['desc'] ?? '');
-            if ($newDesc !== '' && !str_contains($oldDesc, $newDesc)) {
-                $consolidated[$file]['desc'] = $oldDesc === '' ? $newDesc : $oldDesc . '; ' . $newDesc;
+            if (!str_contains($oldDesc, $newDesc)) {
+                $consolidated[$file]['desc'] = $oldDesc . '; ' . $newDesc;
             }
         }
     }
     $changes = array_values($consolidated);
 }
-
-$count_all = is_array($changes) ? count($changes) : 0;
-$count_new = 0;
-$count_modified = 0;
-$count_deleted = 0;
-$count_malware = 0;
-$count_suspicious = 0;
-$count_policy = 0;
-foreach ($changes as $c) {
-    if (!is_array($c)) continue;
-    $t = strtoupper((string)($c['type'] ?? ''));
-    if ($t === 'NEW') $count_new++;
-    elseif ($t === 'MODIFIED') $count_modified++;
-    elseif ($t === 'DELETED' || $t === 'UNAVAILABLE') $count_deleted++;
-    elseif ($t === 'MALWARE' || $t === 'QUARANTINED') $count_malware++;
-    elseif ($t === 'POLICY') $count_policy++;
-    elseif ($t === 'SUSPICIOUS') $count_suspicious++;
-    else $count_modified++;
-}
-$hasConfirmedMalware = $count_malware > 0;
 
 // COLORS & SVG PATHS (Adapted for VGT APEX)
 $status_color = '#64748b'; 
@@ -85,7 +54,7 @@ if ($status === 'clean' || $status === 'init') {
     $status_icon_svg = '<polyline points="20 6 9 17 4 12"></polyline>'; // Check
     $status_pulse_class = 'vgt-is-active';
 } elseif ($status === 'warning') {
-    $status_color = $hasConfirmedMalware ? '#ef4444' : '#f59e0b'; 
+    $status_color = '#ef4444'; 
     $status_icon_svg = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>';
     $status_pulse_class = 'vgt-is-alert';
 }
@@ -111,7 +80,7 @@ if ($status === 'clean' || $status === 'init') {
                 <h2>
                     <?php esc_html_e('SYSTEM INTEGRITY MONITOR', 'vgt-sentinel'); ?>
                     <?php if($status === 'warning'): ?>
-                        <span class="vgt-badge <?php echo $hasConfirmedMalware ? 'vgt-badge-alert' : 'vgt-badge-warning'; ?>" style="border-radius:4px;"><?php echo esc_html($hasConfirmedMalware ? __('MALWARE EVIDENCE', 'vgt-sentinel') : __('REVIEW REQUIRED', 'vgt-sentinel')); ?></span>
+                        <span class="vgt-badge vgt-badge-alert" style="border-radius:4px;"><?php esc_html_e('BREACH DETECTED', 'vgt-sentinel'); ?></span>
                     <?php else: ?>
                         <span class="vgt-badge vgt-badge-neutral" style="border-radius:4px;"><?php esc_html_e('FILE HASHING ENGINE', 'vgt-sentinel'); ?></span>
                     <?php endif; ?>
@@ -163,13 +132,13 @@ if ($status === 'clean' || $status === 'init') {
 
     <?php else: ?>
         <!-- WARNING / ANOMALY STATE -->
-        <div class="vgt-glass-panel vgt-table-container" style="border: 1px solid <?php echo esc_attr($hasConfirmedMalware ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'); ?>; box-shadow: 0 0 30px <?php echo esc_attr($hasConfirmedMalware ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.08)'); ?>;">
+        <div class="vgt-glass-panel vgt-table-container" style="border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);">
             
                         <div class="vgt-state-alert-header">
-                <div style="display:flex; align-items:center; gap:12px; color:<?php echo esc_attr($hasConfirmedMalware ? 'var(--vgt-neon-red)' : '#f59e0b'); ?>;">
+                <div style="display:flex; align-items:center; gap:12px; color:var(--vgt-neon-red);">
                     <svg class="vgt-icon" style="width:24px; height:24px; animation: vgt-pulse-alert 1.5s infinite;" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                     <div>
-                        <strong style="font-size:16px; letter-spacing:1px; display:block;"><?php echo esc_html($hasConfirmedMalware ? __('MALWARE EVIDENCE DETECTED', 'vgt-sentinel') : __('ANOMALIES REQUIRE REVIEW', 'vgt-sentinel')); ?></strong>
+                        <strong style="font-size:16px; letter-spacing:1px; display:block;"><?php esc_html_e('CRITICAL ANOMALIES DETECTED', 'vgt-sentinel'); ?></strong>
                         <span style="font-size:12px; font-family:monospace; color:var(--vgt-text-dim);">
                             <?php 
                             printf(
@@ -189,6 +158,28 @@ if ($status === 'clean' || $status === 'init') {
                 </button>
             </div>
 
+            <?php
+            $count_all = count($changes);
+            $count_new = 0;
+            $count_modified = 0;
+            $count_deleted = 0;
+            $count_malware = 0;
+
+            foreach ($changes as $c) {
+                $t = strtoupper((string)($c['type'] ?? ''));
+                if ($t === 'NEW') {
+                    $count_new++;
+                } elseif ($t === 'MODIFIED') {
+                    $count_modified++;
+                } elseif ($t === 'DELETED' || $t === 'UNAVAILABLE') {
+                    $count_deleted++;
+                } elseif ($t === 'MALWARE' || $t === 'QUARANTINED' || !empty($c['risk'])) {
+                    $count_malware++;
+                } else {
+                    $count_modified++;
+                }
+            }
+            ?>
 
             <!-- DIRECT ANOMALY CATEGORY TABS -->
             <div class="vgt-anomaly-tabs-bar">
@@ -217,16 +208,6 @@ if ($status === 'clean' || $status === 'init') {
                     <span><?php esc_html_e('MALWARE', 'vgt-sentinel'); ?></span>
                     <span class="vgt-tab-count <?php echo $count_malware > 0 ? 'vgt-count-alert' : ''; ?>"><?php echo (int)$count_malware; ?></span>
                 </button>
-                <button type="button" class="vgt-tab-btn" data-filter="suspicious">
-                    <svg class="vgt-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <span><?php esc_html_e('REVIEW', 'vgt-sentinel'); ?></span>
-                    <span class="vgt-tab-count <?php echo $count_suspicious > 0 ? 'vgt-count-mod' : ''; ?>"><?php echo (int)$count_suspicious; ?></span>
-                </button>
-                <button type="button" class="vgt-tab-btn" data-filter="policy">
-                    <svg class="vgt-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    <span><?php esc_html_e('POLICY', 'vgt-sentinel'); ?></span>
-                    <span class="vgt-tab-count <?php echo $count_policy > 0 ? 'vgt-count-new' : ''; ?>"><?php echo (int)$count_policy; ?></span>
-                </button>
             </div>
 
             <table class="vgt-data-table" id="vgt-integrity-table">
@@ -253,15 +234,9 @@ if ($status === 'clean' || $status === 'init') {
                     } elseif ($type === 'DELETED' || $type === 'UNAVAILABLE') {
                         $badge_class = 'vgt-badge-alert';
                         $category = 'deleted';
-                    } elseif ($type === 'MALWARE' || $type === 'QUARANTINED') {
+                    } elseif ($type === 'MALWARE' || $type === 'QUARANTINED' || !empty($change['risk'])) {
                         $badge_class = 'vgt-badge-alert';
                         $category = 'malware';
-                    } elseif ($type === 'POLICY') {
-                        $badge_class = 'vgt-badge-active';
-                        $category = 'policy';
-                    } elseif ($type === 'SUSPICIOUS') {
-                        $badge_class = 'vgt-badge-warning';
-                        $category = 'suspicious';
                     }
                     
                     $file_rel_path = ltrim((string)($change['file'] ?? ''), '/');
@@ -274,7 +249,7 @@ if ($status === 'clean' || $status === 'init') {
                         <td style="color:var(--vgt-text-dim); font-size:12px;">
                             <?php echo esc_html((string)($change['desc'] ?? '')); ?>
                             <?php if (!empty($change['risk'])): ?>
-                                <span style="display:block; font-size:10px; color:<?php echo esc_attr($category === 'malware' ? 'var(--vgt-neon-red)' : ($category === 'suspicious' ? '#f59e0b' : 'var(--vgt-text-dim)')); ?>; margin-top:2px;">
+                                <span style="display:block; font-size:10px; color:var(--vgt-neon-red); margin-top:2px;">
                                     <?php printf(esc_html__('Risiko: %d%% | Konfidenz: %d%%', 'vgt-sentinel'), (int)$change['risk'], (int)($change['confidence'] ?? 0)); ?>
                                 </span>
                             <?php endif; ?>

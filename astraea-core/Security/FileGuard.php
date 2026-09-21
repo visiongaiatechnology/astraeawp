@@ -159,6 +159,7 @@ final class FileGuard {
             'png'                => 'image/png',
             'gif'                => 'image/gif',
             'webp'               => 'image/webp',
+            'avif'               => 'image/avif',
             default              => null,
         };
         if ($expectedImageMime !== null && $detectedMime !== $expectedImageMime) {
@@ -191,7 +192,8 @@ final class FileGuard {
         $expectedType = match($detectedMime) {
             'image/jpeg' => IMAGETYPE_JPEG,
             'image/png'  => IMAGETYPE_PNG,
-            'image/webp' => IMAGETYPE_WEBP,
+            'image/webp' => defined('IMAGETYPE_WEBP') ? IMAGETYPE_WEBP : 18,
+            'image/avif' => defined('IMAGETYPE_AVIF') ? IMAGETYPE_AVIF : 19,
             'image/gif'  => IMAGETYPE_GIF,
             default      => null,
         };

@@ -27,4 +27,5 @@ astraea-core/GeDefense/description
 astraea-core/GeDefense/index
 
 powershell.exe
+dist/
 

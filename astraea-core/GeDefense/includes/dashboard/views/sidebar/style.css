@@ -13,9 +13,10 @@
         /* OMEGA FIXIERUNG & LAYOUT-SCHUTZ */
         width: 260px;
         position: fixed; /* Nimmt die Sidebar aus dem HTML-Flow -> Verhindert das Wegdrücken des Contents */
-        top: 32px;       /* Abstand für die WordPress Admin-Bar oben */
-        height: calc(100vh - 32px);
-        max-height: calc(100vh - 32px);
+        top: var(--astraea-topbar-height, 48px); /* Abstand für die AstraeaOS Admin-Bar oben */
+        left: var(--astraea-sidebar-width, 216px);
+        height: calc(100vh - var(--astraea-topbar-height, 48px));
+        max-height: calc(100vh - var(--astraea-topbar-height, 48px));
         z-index: 100;
         overflow: hidden;    /* Garantiert, dass sie über dem Content liegt */
         
@@ -26,6 +27,10 @@
         box-shadow: 4px 0 24px rgba(0,0,0,0.3);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         box-sizing: border-box;
+    }
+
+    body.folded .vgt-sidebar {
+        left: var(--astraea-sidebar-collapsed-width, 56px);
     }
 
     .vgt-sidebar * { box-sizing: border-box; }

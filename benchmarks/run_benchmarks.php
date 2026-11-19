@@ -35,6 +35,28 @@ if (!function_exists('wp_normalize_path')) {
         return preg_replace('|(?<=.)/+|', '/', $path);
     }
 }
+// Minimal object-cache shim: the GeDefense 8.6.0 Aegis pipeline consults the
+// WordPress object cache, which is not available in this standalone runner.
+if (!function_exists('wp_cache_get')) {
+    function wp_cache_get(string $key, string $group = '', bool $force = false): mixed {
+        return false;
+    }
+}
+if (!function_exists('wp_cache_set')) {
+    function wp_cache_set(string $key, mixed $value, string $group = '', int $expire = 0): bool {
+        return true;
+    }
+}
+if (!function_exists('wp_cache_delete')) {
+    function wp_cache_delete(string $key, string $group = ''): bool {
+        return true;
+    }
+}
+if (!function_exists('wp_json_encode')) {
+    function wp_json_encode(mixed $data, int $options = 0, int $depth = 512): string|false {
+        return json_encode($data, $options, $depth);
+    }
+}
 
 require_once ABSPATH . 'wp-includes/version.php';
 require_once ABSPATH . 'astraea-core/Bootstrap/Autoloader.php';

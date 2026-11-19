@@ -15,15 +15,9 @@ final class EventFabric {
         self::$booted = true;
         RequestContext::id();
         ResponseEngine::boot();
-        if (function_exists('add_action')) {
-            add_action('vis_xdr_retention_cleanup', [self::class, 'cleanup']);
-            add_action('init', static function (): void {
-                if (function_exists('wp_next_scheduled') && function_exists('wp_schedule_event')) {
-                    if (!\wp_next_scheduled('vis_xdr_retention_cleanup')) {
-                        \wp_schedule_event(time() + 1800, 'daily', 'vis_xdr_retention_cleanup');
-                    }
-                }
-            });
+        add_action('vis_xdr_retention_cleanup', [self::class, 'cleanup']);
+        if (!wp_next_scheduled('vis_xdr_retention_cleanup')) {
+            wp_schedule_event(time() + 1800, 'daily', 'vis_xdr_retention_cleanup');
         }
     }
 

@@ -95,7 +95,14 @@ final class Nemesis {
     private function write_telemetry( string $type, string $details, string $ip = '' ): void {
         global $wpdb;
         if ( empty( $ip ) ) {
-            $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            $ip = class_exists( '\VIS_Security' )
+                ? (string) \VIS_Security::client_ip()
+                : (string) ( $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0' );
+        }
+        // CLI/cron requests have no socket address. Tag them explicitly instead
+        // of writing a misleading 0.0.0.0 telemetry record.
+        if ( $ip === '0.0.0.0' || $ip === '' ) {
+            $ip = ( defined( 'WP_CLI' ) && WP_CLI ) || ( defined( 'DOING_CRON' ) && DOING_CRON ) ? 'CLI' : '0.0.0.0';
         }
         $raw_ua = $_SERVER['HTTP_USER_AGENT'] ?? 'UNKNOWN';
 
@@ -284,7 +291,9 @@ final class Nemesis {
     public function inject_canary_token(): void {
         if ( is_admin() || wp_is_json_request() || wp_doing_ajax() ) return;
 
-        $salt = defined( 'AUTH_SALT' ) ? AUTH_SALT : 'vgt_critical_fallback_salt_99';
+        $salt = class_exists( 'VIS_Security' )
+            ? VIS_Security::install_key( 'nemesis-canary' )
+            : (string)( function_exists( 'wp_salt' ) ? wp_salt( 'auth' ) : '' );
         
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $host = preg_replace( '/[^a-zA-Z0-9.-]/', '', $host ); 

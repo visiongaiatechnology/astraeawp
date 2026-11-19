@@ -1,0 +1,23 @@
+# AstraeaOS WP ships byte-exact SHA-256 manifests (BUILD-MANIFEST.json,
+# astraea-core/BUILD-MANIFEST.json). Any end-of-line conversion or encoding
+# rewriting by Git would invalidate those hashes, so EOL transformation is
+# disabled for the whole tree.
+* -text
+
+# Explicit binary declarations (also prevents diff noise)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.pdf binary
+*.mo binary
+*.zip binary
+*.gz binary

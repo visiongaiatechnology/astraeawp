@@ -22,7 +22,8 @@ function containsAny(string $haystack, array $needles): bool {
 }
 
 require_once $root . '/astraea-core/Version.php';
-check('Distribution version source', \Astraea\Version::VERSION === '0.6.0-alpha');
+check('Distribution version source', \Astraea\Version::VERSION === '0.8.0');
+check('Distribution declares WordPress 7.1.5 base', \Astraea\Version::WP_BASE === '7.1.5');
 
 $versionPhp = source($root . '/wp-includes/version.php');
 check('wp-includes version delegates to Astraea Version', str_contains($versionPhp, '\\Astraea\\Version::VERSION'));
@@ -446,6 +447,74 @@ check('Secure Genesis refuses remote salt dependency', !str_contains($setupConfi
 check('Public HTTP installer transport is fail-closed', str_contains($genesis, '$httpsBlocking') && str_contains($genesis, 'unencrypted public installer transport rejected'));
 check('Hades is deferred during genesis to prevent lockout', str_contains($genesis, 'Hades is intentionally deferred') && !str_contains($genesis, "custom['hades']"));
 check('Secure Genesis has no external UI dependencies', !preg_match('#https?://[^\"\']+#i', $genesisJs) && !containsAny($genesisView, ['cdn.jsdelivr.net', 'unpkg.com', 'cdnjs.cloudflare.com', 'fonts.googleapis.com']));
+
+// AstraeaOS Core / GeDefense 8.6.0 integration checks (SonaMedia-free distribution).
+$geKernel = source($root . '/astraea-core/GeDefense/GeDefenseKernel.php');
+$eventBus = source($root . '/astraea-core/GeDefense/includes/core/class-vis-event-bus.php');
+$modBootstrap = source($root . '/astraea-core/Modules/ModuleBootstrap.php');
+$defaultConstants = source($root . '/wp-includes/default-constants.php');
+$wpSettings = source($root . '/wp-settings.php');
+
+check('GeDefense 8.6.0 kernel integrated', str_contains($geKernel, "'VIS_VERSION', '8.6.0-astraea'") && str_contains($geKernel, "'VIS_MANIFEST_DIGEST'"));
+check('GeDefense event bus bridges telemetry into Astraea', str_contains($eventBus, 'astraea_gedefense_security_event') && str_contains($eventBus, 'scrub_context'));
+
+// Split guard: the SonaMedia distribution must not leak into the AstraeaOS WP mainline.
+check('No SonaMedia VoD kernel directory shipped', !is_dir($root . '/astraea-core/SonaMediaVod'));
+check('No SonaMedia VoD module shipped', !is_file($root . '/astraea-core/Modules/CoreModules/SonaMediaVodModule.php'));
+check('No SonaMedia module registered in ModuleBootstrap', !str_contains($modBootstrap, 'SonaMediaVodModule'));
+check('No SonaMedia maintenance MU-plugin shipped', !is_file($root . '/wp-content/mu-plugins/sonamedia-umbau.php'));
+check('No Mediathek plugin shipped', !is_dir($root . '/wp-content/plugins/Mediathek'));
+check('No MedianetTheme shipped', !is_dir($root . '/wp-content/themes/MedianetTheme'));
+check('Upstream default theme is untouched', !str_contains($defaultConstants, 'MedianetTheme'));
+check('wp-settings.php carries both Astraea lifecycle hooks', str_contains($wpSettings, 'BootOrchestrator::bootPhaseB()') && str_contains($wpSettings, 'BootOrchestrator::bootPhaseD()'));
+check('Core version target is WordPress 7.1.5', str_contains($versionPhp, "\$wp_version = '7.1.5';"));
+
+// GeDefense module integrity against the pinned trust anchor (28 components, must be exact).
+if (!defined('ABSPATH')) {
+    define('ABSPATH', $root . '/');
+}
+if (!function_exists('wp_normalize_path')) {
+    function wp_normalize_path(string $path): string {
+        return str_replace('\\', '/', $path);
+    }
+}
+if (!class_exists('StorageException', false)) {
+    class StorageException extends \Exception {}
+}
+$geDefenseRoot = $root . '/astraea-core/GeDefense/';
+if (!defined('VIS_PATH')) {
+    define('VIS_PATH', $geDefenseRoot);
+}
+$digestPinned = preg_match("/VIS_MANIFEST_DIGEST',\s*'([a-f0-9]{64})'/", $geKernel, $digestMatch) === 1;
+if ($digestPinned && !defined('VIS_MANIFEST_DIGEST')) {
+    define('VIS_MANIFEST_DIGEST', $digestMatch[1]);
+}
+check('GeDefense kernel pins a manifest digest', $digestPinned);
+
+$geDefenseManifest = $geDefenseRoot . 'integrity/module-manifest.json';
+check(
+    'GeDefense trust anchor matches the shipped manifest',
+    is_file($geDefenseManifest)
+        && defined('VIS_MANIFEST_DIGEST')
+        && hash_equals((string)VIS_MANIFEST_DIGEST, (string)hash_file('sha256', $geDefenseManifest))
+);
+
+require_once $geDefenseRoot . 'includes/core/class-vis-module-integrity.php';
+$geDefenseIntegrity = class_exists('VIS_Module_Integrity') ? VIS_Module_Integrity::verify_all() : [];
+$geDefenseVerified = 0;
+$geDefenseFailed = [];
+foreach ($geDefenseIntegrity as $componentId => $componentResult) {
+    if (($componentResult['status'] ?? '') === 'VERIFIED') {
+        $geDefenseVerified++;
+    } else {
+        $geDefenseFailed[] = $componentId . '=' . ($componentResult['status'] ?? 'UNKNOWN');
+    }
+}
+check(
+    'GeDefense module integrity verifies all 28 components',
+    $geDefenseVerified === 28 && count($geDefenseIntegrity) === 28,
+    $geDefenseFailed !== [] ? implode(', ', $geDefenseFailed) : $geDefenseVerified . '/28 VERIFIED'
+);
 
 foreach ($results as [$status, $name, $detail]) {
     printf("[%s] %s%s\n", $status, $name, $detail !== '' ? " — {$detail}" : '');

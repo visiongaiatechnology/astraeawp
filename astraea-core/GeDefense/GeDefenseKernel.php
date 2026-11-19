@@ -34,13 +34,16 @@ final class GeDefenseKernel {
         }
 
         if (!defined('VIS_VERSION')) {
-            define('VIS_VERSION', '8.2.4-astraea');
+            define('VIS_VERSION', '8.6.0-astraea');
         }
         if (!defined('VIS_MANIFEST_DIGEST')) {
-            define('VIS_MANIFEST_DIGEST', '98f6fa495e55fea918acf7b53c2a93f3c2cd383156cccdb0d2b8f39fe7ede352');
+            define('VIS_MANIFEST_DIGEST', '9c3403ed7a8bfa8865669b51cdd60febd213d081d9025ea8bfca1c67d161a78c');
         }
         if (!defined('VIS_PRODUCT_NAME')) {
-            define('VIS_PRODUCT_NAME', 'GeDefense WP — AstraeaOS Core Security Kernel');
+            define('VIS_PRODUCT_NAME', 'GeDefense WP 8.6.0 — AstraeaOS Security Kernel');
+        }
+        if (!defined('VIS_GORGON_NEXUS_MAGIC')) {
+            define('VIS_GORGON_NEXUS_MAGIC', 'vgt-magic-noc-9938-omega-fusion');
         }
         if (!defined('VIS_PATH')) {
             define('VIS_PATH', __DIR__ . '/');
@@ -65,6 +68,9 @@ final class GeDefenseKernel {
                 define('VIS_VAULT_DIR', __DIR__ . '/vault-storage');
             }
         }
+        if (!defined('VIS_MANIFEST_FILE')) {
+            define('VIS_MANIFEST_FILE', VIS_VAULT_DIR . '/integrity_matrix.json');
+        }
 
         // Register GeDefense internal autoloader and security primitives
         require_once VIS_PATH . 'class-vis-bootstrapper.php';
@@ -79,13 +85,40 @@ final class GeDefenseKernel {
     }
 
     /**
+     * Guard against running GeDefense runtime hooks during WordPress / Astraea installation
+     * or while AUTH_SALT / $wpdb are not yet provisioned.
+     */
+    private static function isInstalling(): bool {
+        if (defined('WP_INSTALLING') && WP_INSTALLING) {
+            return true;
+        }
+        if (defined('WP_SETUP_CONFIG') && WP_SETUP_CONFIG) {
+            return true;
+        }
+        if (function_exists('wp_installing') && wp_installing()) {
+            return true;
+        }
+        if (!defined('AUTH_SALT') || strlen((string) AUTH_SALT) < 32) {
+            return true;
+        }
+        global $wpdb;
+        if (!isset($wpdb) || !($wpdb instanceof \wpdb) || empty($wpdb->dbh)) {
+            return true;
+        }
+        if (function_exists('wp_cache_get') && function_exists('is_blog_installed') && !is_blog_installed()) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Engage early pre-flight kernel (Phase 1).
      * Runs in Phase C after $wpdb and object cache are ready.
      */
     public static function engageEarly(): void {
         self::boot();
 
-        if (class_exists('\\VIS_Bootstrapper') && \VIS_Bootstrapper::is_installing()) {
+        if (self::isInstalling()) {
             return;
         }
 
@@ -96,12 +129,11 @@ final class GeDefenseKernel {
         $config = [];
         global $wpdb;
         if (isset($wpdb) && ($wpdb instanceof \wpdb) && !empty($wpdb->dbh)) {
-            // Auto-enforce GeDefense database schema before Cerberus accesses tables
-            if (get_option('vis_db_version') !== VIS_VERSION) {
-                require_once VIS_PATH . 'class-vis-schema.php';
-                if (class_exists('VIS_Schema')) {
-                    \VIS_Schema::enforce();
-                }
+            // Auto-enforce GeDefense database schema before Cerberus accesses tables.
+            // VIS_Schema::enforce() checks numeric SCHEMA_VERSION internally and bails early when current.
+            require_once VIS_PATH . 'class-vis-schema.php';
+            if (class_exists('VIS_Schema')) {
+                \VIS_Schema::enforce();
             }
 
             $raw = get_option('vis_config', []);
@@ -119,7 +151,7 @@ final class GeDefenseKernel {
     public static function engageFull(): void {
         self::boot();
 
-        if (class_exists('\\VIS_Bootstrapper') && \VIS_Bootstrapper::is_installing()) {
+        if (self::isInstalling()) {
             return;
         }
 
@@ -130,12 +162,9 @@ final class GeDefenseKernel {
         $config = [];
         global $wpdb;
         if (isset($wpdb) && ($wpdb instanceof \wpdb) && !empty($wpdb->dbh)) {
-            // Auto-enforce GeDefense database schema if still pending
-            if (get_option('vis_db_version') !== VIS_VERSION) {
-                require_once VIS_PATH . 'class-vis-schema.php';
-                if (class_exists('VIS_Schema')) {
-                    \VIS_Schema::enforce();
-                }
+            require_once VIS_PATH . 'class-vis-schema.php';
+            if (class_exists('VIS_Schema')) {
+                \VIS_Schema::enforce();
             }
 
             $raw = get_option('vis_config', []);

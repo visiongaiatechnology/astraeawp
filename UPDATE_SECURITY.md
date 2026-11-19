@@ -31,7 +31,7 @@ To ensure deterministic verification, the detached signature signs a canonicaliz
 ```
 ASTRAEA-RELEASE-V1
 project=AstraeaOS WP
-version=0.6.0-alpha
+version=0.8.0
 corpus_sha256=<64-char-hex-hash>
 total_files=<integer>
 ```

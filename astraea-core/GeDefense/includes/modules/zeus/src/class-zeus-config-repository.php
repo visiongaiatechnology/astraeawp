@@ -49,22 +49,68 @@ final class Zeus_Config_Repository {
             'fs_disable_edit'       => false,
             'fs_prevent_hotlink'    => false,
             'spam_comment_block'    => false,
+            'threat_intel_preboot_enabled' => true,
+            'ip_whitelist'          => ['127.0.0.1', '::1'],
             'policy_digest'         => ''
         ];
     }
 
     public static function get(): array {
-        $defaults = self::getDefaults();
-        if (class_exists('\\VIS_Bootstrapper') && \VIS_Bootstrapper::is_installing()) {
-            return $defaults;
-        }
-        global $wpdb;
-        if (!isset($wpdb) || !($wpdb instanceof \wpdb) || empty($wpdb->dbh) || !function_exists('wp_cache_get') || !function_exists('get_option')) {
-            return $defaults;
-        }
         $stored = get_option(self::OPTION_KEY, []);
-        if (!is_array($stored)) return $defaults;
-        return array_merge($defaults, $stored);
+        $defaults = self::getDefaults();
+        $merged = is_array($stored) ? array_merge($defaults, $stored) : $defaults;
+
+        $opt_wl = get_option('vgt_zeus_whitelist_ips', null);
+        if (is_array($opt_wl)) {
+            $merged['ip_whitelist'] = array_values(array_unique(array_filter(
+                array_map('trim', array_map('strval', array_merge(['127.0.0.1', '::1'], $opt_wl))),
+                static fn(string $v): bool => $v !== ''
+            )));
+        } elseif (!is_array($merged['ip_whitelist'] ?? null)) {
+            $merged['ip_whitelist'] = ['127.0.0.1', '::1'];
+        }
+
+        return $merged;
+    }
+
+    public static function sanitizeIpList(mixed $raw): array {
+        $items = [];
+        if (is_array($raw)) {
+            $items = $raw;
+        } elseif (is_string($raw)) {
+            $items = preg_split('/\r\n|\r|\n|,/', $raw) ?: [];
+        }
+
+        $clean = ['127.0.0.1', '::1'];
+        foreach ($items as $item) {
+            $candidate = trim((string)$item);
+            if ($candidate === '') {
+                continue;
+            }
+            if (filter_var($candidate, FILTER_VALIDATE_IP) !== false) {
+                if (!in_array($candidate, $clean, true)) {
+                    $clean[] = $candidate;
+                }
+                continue;
+            }
+            if (str_contains($candidate, '/')) {
+                [$subnet, $bits] = explode('/', $candidate, 2);
+                $subnet = trim($subnet);
+                $bits = trim($bits);
+                if (filter_var($subnet, FILTER_VALIDATE_IP) !== false && ctype_digit($bits)) {
+                    $maxBits = str_contains($subnet, ':') ? 128 : 32;
+                    $bitVal = (int)$bits;
+                    if ($bitVal >= 0 && $bitVal <= $maxBits) {
+                        $cidr = $subnet . '/' . $bitVal;
+                        if (!in_array($cidr, $clean, true)) {
+                            $clean[] = $cidr;
+                        }
+                    }
+                }
+            }
+        }
+
+        return array_values($clean);
     }
 
     public static function sanitize(array $raw, ?array $current = null): array {
@@ -130,6 +176,14 @@ final class Zeus_Config_Repository {
             return isset($raw[$key]) ? (bool)$raw[$key] : (!empty($current[$key]));
         };
 
+        $ipWhitelist = isset($raw['ip_whitelist'])
+            ? self::sanitizeIpList($raw['ip_whitelist'])
+            : self::sanitizeIpList($current['ip_whitelist'] ?? ['127.0.0.1', '::1']);
+
+        if (function_exists('update_option')) {
+            update_option('vgt_zeus_whitelist_ips', $ipWhitelist);
+        }
+
         $clean = [
             'zeus_enabled'          => $getBool('zeus_enabled'),
             'security_profile'      => $profile,
@@ -161,6 +215,8 @@ final class Zeus_Config_Repository {
             'fs_disable_edit'       => $getBool('fs_disable_edit'),
             'fs_prevent_hotlink'    => $getBool('fs_prevent_hotlink'),
             'spam_comment_block'    => $getBool('spam_comment_block'),
+            'threat_intel_preboot_enabled' => $getBool('threat_intel_preboot_enabled'),
+            'ip_whitelist'          => $ipWhitelist,
         ];
 
         $clean['policy_digest'] = Zeus_Policy_Manager::computeDigest($clean);

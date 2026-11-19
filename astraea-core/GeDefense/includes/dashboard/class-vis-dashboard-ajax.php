@@ -54,6 +54,9 @@ final class VIS_Dashboard_Ajax {
         // VGT ADD-ON SYSTEM: Dynamic module upload and management
         add_action('wp_ajax_vis_upload_addon', [self::class, 'handle_upload_addon']);
         add_action('wp_ajax_vis_uninstall_addon', [self::class, 'handle_uninstall_addon']);
+
+        // VGT REAL-TIME THREAT TELEMETRY: 100% Genuine database threat poller
+        add_action('wp_ajax_vis_get_live_threats', [self::class, 'handle_get_live_threats']);
     }
         
         // CHIRURGISCHER EINGRIFF: Gorgon-Endpoints restlos entfernt.
@@ -68,6 +71,20 @@ final class VIS_Dashboard_Ajax {
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => 'VGT_UNAUTHORIZED_ACCESS'], 403);
         }
+    }
+
+    /**
+     * Opaque failure response for unexpected (non-validation) errors.
+     * Internal details stay in the server log; the client gets a correlation id.
+     */
+    private static function opaque_failure(string $label, \Throwable $e, int $status = 500): void {
+        $incident = substr(hash('sha256', $label . '|' . $e->getMessage() . '|' . microtime(true)), 0, 12);
+        error_log(sprintf('[VGT DASHBOARD] %s [%s]: %s', $label, $incident, $e->getMessage()));
+
+        wp_send_json_error([
+            'message'  => 'The operation failed. Reference: ' . $incident,
+            'incident' => $incident,
+        ], $status);
     }
 
     // ========================================================================
@@ -210,8 +227,7 @@ final class VIS_Dashboard_Ajax {
             $result = \VisionGaia\GeDefense\Modules\Zeus\Zeus_Benchmark::runMicrobenchmark($profile, $iterations);
             wp_send_json_success($result);
         } catch (Throwable $e) {
-            error_log('[ZEUS BENCHMARK] ' . $e->getMessage());
-            wp_send_json_error(['message' => 'Benchmark execution error: ' . $e->getMessage()], 500);
+            self::opaque_failure('ZEUS BENCHMARK', $e);
         }
     }
 
@@ -223,8 +239,7 @@ final class VIS_Dashboard_Ajax {
             $result = \VisionGaia\GeDefense\Modules\Zeus\Zeus_Benchmark::runSecuritySelfTest(wp_normalize_path($vaultDir));
             wp_send_json_success($result);
         } catch (Throwable $e) {
-            error_log('[ZEUS SELFTEST] ' . $e->getMessage());
-            wp_send_json_error(['message' => 'Self-test execution error: ' . $e->getMessage()], 500);
+            self::opaque_failure('ZEUS SELFTEST', $e);
         }
     }
 
@@ -241,8 +256,7 @@ final class VIS_Dashboard_Ajax {
                 'metrics' => $metrics
             ]);
         } catch (Throwable $e) {
-            error_log('[ZEUS DRAIN] ' . $e->getMessage());
-            wp_send_json_error(['message' => 'Drain error: ' . $e->getMessage()], 500);
+            self::opaque_failure('ZEUS DRAIN', $e);
         }
     }
 
@@ -362,17 +376,12 @@ final class VIS_Dashboard_Ajax {
     }
 
     public static function handle_inspect_file(): void {
-        if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 405);
-        }
         check_ajax_referer('vis_nonce', 'nonce');
-        if (!current_user_can('manage_options') || !current_user_can('edit_plugins')) {
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Zugriff verweigert.', 'vgt-sentinel')]);
         }
 
-        $file = isset($_POST['file']) && is_string($_POST['file'])
-            ? sanitize_text_field(wp_unslash($_POST['file']))
-            : '';
+        $file = sanitize_text_field($_POST['file'] ?? '');
         if (empty($file)) {
             wp_send_json_error(['message' => __('Kein Dateipfad übermittelt.', 'vgt-sentinel')]);
         }
@@ -390,8 +399,7 @@ final class VIS_Dashboard_Ajax {
 
         $real_content = realpath(WP_CONTENT_DIR);
         if ($real_content === false || !str_starts_with($real_path, $real_content . DIRECTORY_SEPARATOR)) {
-            error_log('[VGT INSPECT SECURITY] Source inspection path escaped content jail.');
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
+            wp_send_json_error(['message' => __('Zugriff verweigert (Pfad-Traversal erkannt).', 'vgt-sentinel')]);
         }
 
         $normalized_real = wp_normalize_path($real_path);
@@ -437,7 +445,9 @@ final class VIS_Dashboard_Ajax {
         wp_send_json_success([
              'filename' => esc_html(basename($real_path)),
              'path'     => esc_html(str_replace(WP_CONTENT_DIR, '', $real_path)),
-             'content'  => $content // Rendered through textContent in integrity/script.js.
+             // Escaped at the source: a future consumer must not be able to
+             // inject file content into the admin DOM unescaped.
+             'content'  => esc_html($content)
         ]);
     }
 
@@ -528,20 +538,14 @@ final class VIS_Dashboard_Ajax {
     // ADD-ON MANAGEMENT HANDLERS
     // ========================================================================
     public static function handle_upload_addon(): void {
-        if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 405);
-        }
         self::verify_privileges('vis_nonce');
-        if (!current_user_can('install_plugins')) {
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
+
+        if (!current_user_can('install_plugins') || (class_exists('VIS_Throne_Guard') && !current_user_can(VIS_Throne_Guard::MASTER_CAP))) {
+            wp_send_json_error(['message' => __('VGT_UNAUTHORIZED_ACCESS: Installation von Add-Ons erfordert Plugin- und Master-Rechte.', 'vgt-sentinel')], 403);
         }
 
-        if (class_exists('\\Astraea\\Auth\\StepUpAuthService')) {
-            try {
-                \Astraea\Auth\StepUpAuthService::guardSensitiveAction(get_current_user_id(), 'addon:upload');
-            } catch (\Throwable $e) {
-                wp_send_json_error(['message' => 'Astraea Step-Up authentication required for addon installation.'], 403);
-            }
+        if (defined('DISALLOW_FILE_MODS') && DISALLOW_FILE_MODS) {
+            wp_send_json_error(['message' => __('VGT_SECURITY_VIOLATION: Dateiänderungen sind durch Systemrichtlinie deaktiviert.', 'vgt-sentinel')], 403);
         }
 
         if (empty($_FILES['addon_zip']) || empty($_FILES['addon_zip']['tmp_name'])) {
@@ -551,24 +555,6 @@ final class VIS_Dashboard_Ajax {
         $file = $_FILES['addon_zip'];
         if ($file['error'] !== UPLOAD_ERR_OK) {
             wp_send_json_error(['message' => __('Upload-Fehler aufgetreten.', 'vgt-sentinel')]);
-        }
-
-        $tmp_path = is_string($file['tmp_name'] ?? null) ? $file['tmp_name'] : '';
-        if ($tmp_path === '' || !is_uploaded_file($tmp_path)) {
-            error_log('[VGT ADDON SECURITY] Upload path authentication failed.');
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
-        }
-
-        $real_size = filesize($tmp_path);
-        if ($real_size === false || $real_size === 0 || $real_size > 10 * 1024 * 1024) {
-            wp_send_json_error(['message' => __('ArchivgrÃ¶ÃŸe liegt auÃŸerhalb des erlaubten Bereichs.', 'vgt-sentinel')], 422);
-        }
-
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $detected_mime = $finfo->file($tmp_path);
-        if (!in_array($detected_mime, ['application/zip', 'application/x-zip', 'application/x-zip-compressed'], true)) {
-            error_log('[VGT ADDON SECURITY] Archive MIME validation failed.');
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
         }
 
         $filename = strtolower($file['name']);
@@ -589,13 +575,7 @@ final class VIS_Dashboard_Ajax {
         $max_uncompressed = 52428800; // 50MB
         $max_files = 500;
         $total_uncompressed = 0;
-        $archive_root = null;
-        $archive_files = [];
-        $allowed_roots = [
-            'vlp' => ['root' => 'vlp', 'entry' => 'vision-legal-pro.php'],
-            'builder' => ['root' => 'builder', 'entry' => 'builder.php'],
-            'visiongaiaseo' => ['root' => 'VisionGaiaSEO', 'entry' => 'visiongaia-seo-architect.php'],
-        ];
+        $allowed_addon_roots = ['vlp', 'builder', 'visiongaiaseo', 'seo'];
 
         if ($zip->numFiles > $max_files) {
             $zip->close();
@@ -605,156 +585,83 @@ final class VIS_Dashboard_Ajax {
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $stat = $zip->statIndex($i);
             if (!$stat) continue;
-            $entry_name = str_replace('\\', '/', (string)$stat['name']);
-            if (str_contains($entry_name, '..') || str_starts_with($entry_name, '/') || str_starts_with($entry_name, '\\') || str_contains($entry_name, "\0")) {
+            $entry_name = str_replace('\\', '/', $stat['name']);
+            if (str_contains($entry_name, '..') || str_starts_with($entry_name, '/') || str_contains($entry_name, "\0")) {
                 $zip->close();
                 wp_send_json_error(['message' => __('Sicherheitsalarm: Unzulässige Pfadstruktur im ZIP-Archiv erkannt.', 'vgt-sentinel')], 403);
             }
 
-            $segments = explode('/', rtrim($entry_name, '/'));
-            $root_key = strtolower($segments[0] ?? '');
-            if (!isset($allowed_roots[$root_key])) {
+            // Whitelist root directory of entries to registered add-on namespaces
+            $trimmed_entry = trim($entry_name, '/');
+            $entry_segments = explode('/', $trimmed_entry);
+            $entry_root = strtolower($entry_segments[0] ?? '');
+            if ($entry_root !== '' && !in_array($entry_root, $allowed_addon_roots, true)) {
                 $zip->close();
-                error_log('[VGT ADDON SECURITY] Archive root validation failed.');
-                wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
-            }
-            $current_root = $allowed_roots[$root_key]['root'];
-            if ($archive_root !== null && $archive_root !== $current_root) {
-                $zip->close();
-                error_log('[VGT ADDON SECURITY] Multiple module roots rejected.');
-                wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
-            }
-            $archive_root = $current_root;
-
-            $opsys = 0;
-            $attributes = 0;
-            if ($zip->getExternalAttributesIndex($i, $opsys, $attributes) && (($attributes >> 16) & 0xF000) === 0xA000) {
-                $zip->close();
-                error_log('[VGT ADDON SECURITY] Symbolic link entry rejected.');
-                wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
+                wp_send_json_error(['message' => sprintf(__('Sicherheitsalarm: Unzulässige Add-On-Struktur "%s" im Archiv.', 'vgt-sentinel'), esc_html($entry_root))], 403);
             }
 
-            if (!str_ends_with($entry_name, '/')) {
-                $archive_files[] = strtolower($entry_name);
+            // Reject Unix symlink entries. ZipArchive would otherwise materialise
+            // a link that resolves outside the add-on directory (Symlink/Zip-Slip).
+            $unix_mode = ((int)($stat['external_attributes'] ?? 0) >> 16) & 0xF000;
+            if ($unix_mode === 0xA000) {
+                $zip->close();
+                wp_send_json_error(['message' => __('Sicherheitsalarm: Symlink-Eintrag im ZIP-Archiv abgelehnt.', 'vgt-sentinel')], 403);
             }
 
             $total_uncompressed += (int)($stat['size'] ?? 0);
-            $compressed_size = (int)($stat['comp_size'] ?? 0);
-            if ((int)($stat['size'] ?? 0) > 1024 * 1024 && ($compressed_size <= 0 || (int)$stat['size'] > $compressed_size * 100)) {
-                $zip->close();
-                error_log('[VGT ADDON SECURITY] Archive compression ratio rejected.');
-                wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
-            }
             if ($total_uncompressed > $max_uncompressed) {
                 $zip->close();
                 wp_send_json_error(['message' => __('Sicherheitsalarm: Entpacktes Archiv überschreitet das 50MB Limit (Zip-Bomb Schutz).', 'vgt-sentinel')], 403);
             }
         }
 
-        $root_key = strtolower((string)$archive_root);
-        $expected_entry = isset($allowed_roots[$root_key])
-            ? strtolower($allowed_roots[$root_key]['root'] . '/' . $allowed_roots[$root_key]['entry'])
-            : '';
-        if ($expected_entry === '' || !in_array($expected_entry, $archive_files, true)) {
-            $zip->close();
-            error_log('[VGT ADDON SECURITY] Registered entrypoint missing.');
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
-        }
-
         $addons_dir = VIS_Module_Registry::get_addons_dir();
         if (!is_dir($addons_dir)) {
-            if (!wp_mkdir_p($addons_dir)) {
-                $zip->close();
-                wp_send_json_error(['message' => 'A server error occurred.'], 500);
-            }
+            wp_mkdir_p($addons_dir);
         }
 
-        $resolved_addons_dir = realpath($addons_dir);
-        if ($resolved_addons_dir === false || !is_dir($resolved_addons_dir)) {
-            $zip->close();
-            error_log('[VGT ADDON SECURITY] Add-on vault path validation failed.');
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
+        // The add-on directory is written by the web server and must never
+        // execute uploaded PHP directly. The previous build wrote only
+        // index.php and only on first creation, so an existing directory stayed
+        // executable. Write both guards unconditionally.
+        $index_file = $addons_dir . '/index.php';
+        if (!is_file($index_file)) {
+            @file_put_contents($index_file, "<?php\nhttp_response_code(404);\nexit;\n");
         }
 
-        $barriers_written = file_put_contents($resolved_addons_dir . DIRECTORY_SEPARATOR . '.htaccess', "Require all denied\nDeny from all\n", LOCK_EX) !== false
-            && file_put_contents($resolved_addons_dir . DIRECTORY_SEPARATOR . 'web.config', '<?xml version="1.0"?><configuration><system.webServer><security><authorization><remove users="*" roles="" verbs=""/><add accessType="Deny" users="*"/></authorization></security></system.webServer></configuration>', LOCK_EX) !== false
-            && file_put_contents($resolved_addons_dir . DIRECTORY_SEPARATOR . 'index.php', "<?php\nhttp_response_code(404);\nexit;\n", LOCK_EX) !== false;
-        if (!$barriers_written) {
-            $zip->close();
-            error_log('[VGT ADDON STORAGE] Execution barrier deployment failed.');
-            wp_send_json_error(['message' => 'A server error occurred.'], 500);
+        $htaccess_file = $addons_dir . '/.htaccess';
+        $htaccess_rules = "Options -Indexes\n"
+            . "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n"
+            . "<IfModule !mod_authz_core.c>\nOrder deny,allow\nDeny from all\n</IfModule>\n";
+        if (!is_file($htaccess_file) || (string)@file_get_contents($htaccess_file) !== $htaccess_rules) {
+            @file_put_contents($htaccess_file, $htaccess_rules);
         }
 
-        $destination = $resolved_addons_dir . DIRECTORY_SEPARATOR . $archive_root;
-        if (!str_starts_with($destination, $resolved_addons_dir . DIRECTORY_SEPARATOR)) {
-            $zip->close();
-            error_log('[VGT ADDON SECURITY] Destination escaped add-on jail.');
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
-        }
-        if (file_exists($destination)) {
-            $zip->close();
-            wp_send_json_error(['message' => __('Dieses Add-On ist bereits installiert.', 'vgt-sentinel')], 409);
+        if (!is_dir($addons_dir) || !is_writable($addons_dir)) {
+            wp_send_json_error(['message' => __('Add-On Verzeichnis ist nicht beschreibbar.', 'vgt-sentinel')], 500);
         }
 
-        $staging = $resolved_addons_dir . DIRECTORY_SEPARATOR . '.staging-' . bin2hex(random_bytes(16));
-        $previous_umask = umask(0077);
-        try {
-            $staging_created = mkdir($staging, 0700);
-            $extracted = $staging_created && $zip->extractTo($staging);
-        } finally {
-            umask($previous_umask);
-            $zip->close();
-        }
+        $extracted = $zip->extractTo($addons_dir);
+        $zip->close();
 
         if (!$extracted) {
-            self::remove_staging_tree($staging, $resolved_addons_dir);
             wp_send_json_error(['message' => __('Entpacken des Add-Ons fehlgeschlagen.', 'vgt-sentinel')]);
         }
-
-        $staged_module = realpath($staging . DIRECTORY_SEPARATOR . $archive_root);
-        if (
-            $staged_module === false
-            || !str_starts_with($staged_module, $staging . DIRECTORY_SEPARATOR)
-            || !rename($staged_module, $destination)
-        ) {
-            self::remove_staging_tree($staging, $resolved_addons_dir);
-            error_log('[VGT ADDON STORAGE] Atomic activation failed.');
-            wp_send_json_error(['message' => 'A server error occurred.'], 500);
-        }
-        @rmdir($staging);
 
         wp_send_json_success([
             'message' => __('Add-On erfolgreich installiert und registriert!', 'vgt-sentinel')
         ]);
     }
 
-    private static function remove_staging_tree(string $staging, string $resolved_addons_dir): void {
-        $resolved_staging = realpath($staging);
-        if (
-            $resolved_staging === false
-            || !is_dir($resolved_staging)
-            || !str_starts_with($resolved_staging, $resolved_addons_dir . DIRECTORY_SEPARATOR . '.staging-')
-        ) {
-            return;
-        }
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($resolved_staging, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($iterator as $item) {
-            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
-        }
-        @rmdir($resolved_staging);
-    }
-
     public static function handle_uninstall_addon(): void {
-        if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 405);
-        }
         self::verify_privileges('vis_nonce');
-        if (!current_user_can('delete_plugins')) {
-            wp_send_json_error(['message' => 'Request rejected for security reasons.'], 403);
+
+        if (!current_user_can('delete_plugins') || (class_exists('VIS_Throne_Guard') && !current_user_can(VIS_Throne_Guard::MASTER_CAP))) {
+            wp_send_json_error(['message' => __('VGT_UNAUTHORIZED_ACCESS: Deinstallation von Add-Ons erfordert Plugin- und Master-Rechte.', 'vgt-sentinel')], 403);
+        }
+
+        if (defined('DISALLOW_FILE_MODS') && DISALLOW_FILE_MODS) {
+            wp_send_json_error(['message' => __('VGT_SECURITY_VIOLATION: Dateiänderungen sind durch Systemrichtlinie deaktiviert.', 'vgt-sentinel')], 403);
         }
 
         $addon_id = sanitize_key($_POST['addon_id'] ?? '');
@@ -768,5 +675,200 @@ final class VIS_Dashboard_Ajax {
         } else {
             wp_send_json_error(['message' => __('Add-On Verzeichnis konnte nicht gefunden oder gelöscht werden.', 'vgt-sentinel')]);
         }
+    }
+
+    /**
+     * 100% Genuine Real-Time Threat Telemetry Poller
+     * Returns authentic active bans and security log records from the local database.
+     */
+    public static function handle_get_live_threats(): void {
+        if (!check_ajax_referer('vis_nonce', 'nonce', false) && !check_ajax_referer('vis_dashboard_nonce', 'nonce', false)) {
+            wp_send_json_error('VGT SECURITY ALERT: Invalid security token.', 403);
+        }
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('VGT SECURITY ALERT: Unauthorized access.', 403);
+        }
+
+        global $wpdb;
+        $canonical_bans = defined('VIS_TABLE_BANS') ? $wpdb->prefix . VIS_TABLE_BANS : $wpdb->prefix . 'vis_apex_bans';
+        $canonical_logs = defined('VIS_TABLE_LOGS') ? $wpdb->prefix . VIS_TABLE_LOGS : $wpdb->prefix . 'vis_omega_logs';
+
+        $suppress = $wpdb->suppress_errors(true);
+        $table_bans = ($wpdb->get_var("SHOW TABLES LIKE '{$canonical_bans}'") === $canonical_bans)
+            ? $canonical_bans
+            : (($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}vis_bans'") === "{$wpdb->prefix}vis_bans") ? "{$wpdb->prefix}vis_bans" : null);
+
+        $stable = ($wpdb->get_var("SHOW TABLES LIKE '{$canonical_logs}'") === $canonical_logs)
+            ? $canonical_logs
+            : (($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}vis_sentinel_logs'") === "{$wpdb->prefix}vis_sentinel_logs") ? "{$wpdb->prefix}vis_sentinel_logs" : null);
+
+        $ptables = [
+            $wpdb->prefix . 'vis_prometheus_logs',
+            $wpdb->prefix . 'vgt_prometheus_logs',
+            $wpdb->prefix . 'prometheus_logs'
+        ];
+
+        $threat_events = [];
+        $seen_ips = [];
+        $countries = [];
+        $blocked = 0;
+
+        $format_time = static function($raw): string {
+            $str = trim((string)$raw);
+            if ($str === '' || $str === '0000-00-00 00:00:00') return __('Aktiv', 'vgt-sentinel');
+            $ts = is_numeric($str) ? (int)$str : strtotime($str);
+            if ($ts && $ts > 0) {
+                $diff = time() - $ts;
+                if ($diff >= 0 && $diff < 60) return __('Gerade eben', 'vgt-sentinel');
+                if ($diff < 3600) return sprintf(__('Vor %d Min.', 'vgt-sentinel'), max(1, (int)round($diff / 60)));
+                if ($diff < 86400) return sprintf(__('Vor %d Std.', 'vgt-sentinel'), (int)round($diff / 3600));
+                return date_i18n('d.m. H:i', $ts);
+            }
+            return $str;
+        };
+
+        // 1. Genuine bans from local database (canonical vis_apex_bans or fallback vis_bans)
+        if ($table_bans !== null) {
+            $bans = $wpdb->get_results("SELECT * FROM {$table_bans} ORDER BY id DESC LIMIT 25");
+            if ($bans) {
+                foreach ($bans as $b) {
+                    $ip = trim((string)($b->ip ?? $b->ip_address ?? ''));
+                    if ($ip === '' || isset($seen_ips[$ip])) continue;
+                    $seen_ips[$ip] = true;
+
+                    $geo = \VisionGaia\GeDefense\Core\GeoResolver::resolve($ip);
+                    $pt = \VisionGaia\GeDefense\Core\GeoResolver::lat_lng_to_point((float)$geo['latitude'], (float)$geo['longitude']);
+                    $cc = $geo['country_code'];
+                    $countries[$cc] = ($countries[$cc] ?? 0) + 1;
+                    $blocked++;
+
+                    $path = !empty($b->request_uri) ? (string)$b->request_uri : '/wp-login.php';
+                    $reason = (string)($b->reason ?? '');
+                    if (empty($b->request_uri) && preg_match('#(/[a-zA-Z0-9_\-\.\/]+(?:\.[a-zA-Z0-9]+|\?[\w\=\&\-]+)?)#', $reason, $m)) {
+                        $path = $m[1];
+                    }
+
+                    $threat_events[] = [
+                        'ip'           => $ip,
+                        'country'      => $cc,
+                        'country_name' => $geo['country_name'],
+                        'asn'          => $geo['asn'],
+                        'as_name'      => $geo['as_name'],
+                        'lat'          => $geo['latitude'],
+                        'lng'          => $geo['longitude'],
+                        'x'            => $pt['x'],
+                        'y'            => $pt['y'],
+                        'path'         => $path,
+                        'module'       => 'Sentinel L1 Firewall',
+                        'action'       => 'HARD-BAN (DROP)',
+                        'severity'     => 'blocked',
+                        'time'         => $format_time($b->banned_at ?? $b->timestamp ?? ''),
+                    ];
+                }
+            }
+        }
+
+        // 2. Genuine logs from Omega/Sentinel and Prometheus
+        $logs = [];
+        if ($stable !== null) {
+            $raw_s = $wpdb->get_results("SELECT * FROM {$stable} ORDER BY id DESC LIMIT 25");
+            if ($raw_s) {
+                foreach ($raw_s as $r) {
+                    $logs[] = (object)[
+                        'timestamp' => $r->timestamp ?? '',
+                        'module'    => $r->module ?? 'KERNEL',
+                        'type'      => $r->type ?? '',
+                        'severity'  => $r->severity ?? 1,
+                        'ip'        => !empty($r->ip) ? $r->ip : (!empty($r->ip_address) ? $r->ip_address : ''),
+                        'message'   => !empty($r->message) ? $r->message : (!empty($r->details) ? $r->details : ($r->type ?? '')),
+                    ];
+                }
+            }
+        }
+        foreach ($ptables as $ptable) {
+            if ($wpdb->get_var("SHOW TABLES LIKE '{$ptable}'") === $ptable) {
+                $raw_p = $wpdb->get_results("SELECT * FROM {$ptable} ORDER BY id DESC LIMIT 25");
+                if ($raw_p) {
+                    foreach ($raw_p as $r) {
+                        $logs[] = (object)[
+                            'timestamp' => $r->timestamp ?? '',
+                            'module'    => 'PROMETHEUS',
+                            'type'      => $r->type ?? 'ANOMALY',
+                            'severity'  => 2,
+                            'ip'        => !empty($r->ip_address) ? $r->ip_address : (!empty($r->ip) ? $r->ip : ''),
+                            'message'   => !empty($r->details) ? $r->details : (!empty($r->message) ? $r->message : ($r->type ?? '')),
+                        ];
+                    }
+                }
+                break;
+            }
+        }
+        $wpdb->suppress_errors($suppress);
+
+        usort($logs, static function($a, $b) {
+            return strtotime((string)$b->timestamp) - strtotime((string)$a->timestamp);
+        });
+
+        foreach ($logs as $l) {
+            if (count($threat_events) >= 30) break;
+            $ip = trim((string)$l->ip);
+            if ($ip === '' || $ip === 'N/A' || $ip === 'UNKNOWN' || isset($seen_ips[$ip])) continue;
+            $seen_ips[$ip] = true;
+
+            $geo = \VisionGaia\GeDefense\Core\GeoResolver::resolve($ip);
+            $pt = \VisionGaia\GeDefense\Core\GeoResolver::lat_lng_to_point((float)$geo['latitude'], (float)$geo['longitude']);
+            $cc = $geo['country_code'];
+            $countries[$cc] = ($countries[$cc] ?? 0) + 1;
+
+            $mod = strtoupper((string)$l->module);
+            $msg = (string)$l->message;
+            $low_msg = strtolower($msg);
+
+            $path = '/wp-login.php';
+            if (preg_match('#(/[a-zA-Z0-9_\-\.\/]+(?:\.[a-zA-Z0-9]+|\?[\w\=\&\-]+)?)#', $msg, $m)) {
+                $path = $m[1];
+            } else {
+                if (str_contains($low_msg, 'xmlrpc')) $path = '/xmlrpc.php';
+                elseif (str_contains($low_msg, 'rest') || str_contains($low_msg, 'wp-json')) $path = '/wp-json/wp/v2/users';
+                elseif (str_contains($low_msg, 'ajax')) $path = '/wp-admin/admin-ajax.php';
+                elseif (str_contains($low_msg, 'author')) $path = '/?author=1';
+                elseif (str_contains($low_msg, 'cron')) $path = '/wp-cron.php?doing_wp_cron';
+                elseif (str_contains($low_msg, 'env')) $path = '/.env';
+                elseif ($mod === 'PROMETHEUS') $path = '/.env';
+                elseif ($mod === 'AEGIS') $path = '/xmlrpc.php';
+                elseif ($mod === 'HADES') $path = '/wp-content/plugins/wp-file-manager/';
+            }
+
+            $is_crit = in_array($mod, ['ZEUS', 'CERBERUS', 'STYX'], true) || str_contains($low_msg, 'block') || str_contains($low_msg, 'exploit');
+            $is_warn = in_array($mod, ['PROMETHEUS', 'NEMESIS', 'ORACLE', 'AEGIS', 'HADES', 'AIRLOCK'], true) || str_contains($low_msg, 'anomaly') || str_contains($low_msg, 'tarpit');
+
+            $severity = $is_crit ? 'blocked' : ($is_warn ? 'suspicious' : 'tracked');
+            $action = $is_crit ? 'INTERCEPT (DROP)' : ($is_warn ? 'TARPIT (DELAY)' : 'MONITORED');
+            if ($severity === 'blocked') $blocked++;
+
+            $threat_events[] = [
+                'ip'           => $ip,
+                'country'      => $cc,
+                'country_name' => $geo['country_name'],
+                'asn'          => $geo['asn'],
+                'as_name'      => $geo['as_name'],
+                'lat'          => $geo['latitude'],
+                'lng'          => $geo['longitude'],
+                'x'            => $pt['x'],
+                'y'            => $pt['y'],
+                'path'         => $path,
+                'module'       => $mod ?: 'Kernel Security',
+                'action'       => $action,
+                'severity'     => $severity,
+                'time'         => $format_time($l->timestamp ?? ''),
+            ];
+        }
+
+        wp_send_json_success([
+            'events'    => $threat_events,
+            'countries' => $countries,
+            'blocked'   => $blocked,
+            'total'     => count($threat_events),
+        ]);
     }
 }

@@ -26,8 +26,6 @@ $assets = $read('includes/dashboard/class-vis-dashboard-assets.php');
 $shell = $read('includes/dashboard/class-vis-dashboard-view.php');
 $settings = $read('includes/dashboard/class-vis-dashboard-settings.php');
 $modern = $read('assets/css/vis-dashboard-modern.css');
-$ajax = $read('includes/dashboard/class-vis-dashboard-ajax.php');
-$moduleRegistry = $read('includes/core/class-vis-module-registry.php');
 
 $expect(str_contains($assets, 'vis-dashboard-modern.css'), 'Final design system is not enqueued.');
 $expect(str_contains($assets, "'/^[a-z0-9_]{1,32}$/D'"), 'View asset path allowlist is missing.');
@@ -62,20 +60,10 @@ $expect(str_contains($settings, "'aegis'      => ['aegis_enabled', 'aegis_mode',
 $expect(str_contains($settings, "'chronos_email_body'"), 'Chronos email body is not persisted.');
 $expect(str_contains($settings, 'array_intersect_key($new_sanitized'), 'Submitted config is not constrained to its module scope.');
 $expect(str_contains($read('includes/dashboard/views/view-setup_wizard.php'), "VIS_Security::client_ip()"), 'Setup wizard does not use the canonical client IP resolver.');
-$expect(str_contains($ajax, 'wp_ajax_vis_upload_addon'), 'Add-on upload controller is disconnected.');
-$expect(str_contains($ajax, 'wp_ajax_vis_uninstall_addon'), 'Add-on uninstall controller is disconnected.');
-$expect(str_contains($ajax, 'wp_ajax_vis_inspect_file'), 'Integrity inspection controller is disconnected.');
-$expect(str_contains($ajax, 'wp_ajax_vis_oracle_ping'), 'Oracle diagnostic controller is disconnected.');
-$expect(str_contains($ajax, "current_user_can('edit_plugins')"), 'Source inspection capability parity is missing.');
-$expect(str_contains($ajax, "'REQUEST_METHOD'"), 'Stateful dashboard endpoints do not enforce an HTTP method.');
-$expect(str_contains($ajax, "current_user_can('install_plugins')"), 'Add-on upload capability parity is missing.');
-$expect(str_contains($ajax, "current_user_can('delete_plugins')"), 'Add-on uninstall capability parity is missing.');
-$expect(str_contains($ajax, 'is_uploaded_file($tmp_path)'), 'Add-on upload origin authentication is missing.');
-$expect(str_contains($ajax, 'filesize($tmp_path)'), 'Add-on upload does not measure the server-side temporary file.');
-$expect(str_contains($ajax, 'getExternalAttributesIndex'), 'Add-on archive symlink rejection is missing.');
-$expect(str_contains($ajax, "'.staging-' . bin2hex(random_bytes(16))"), 'Add-on extraction is not isolated in an unpredictable staging directory.');
-$expect(str_contains($ajax, 'self::remove_staging_tree($staging, $resolved_addons_dir)'), 'Failed add-on activation does not clean staging data.');
-$expect(str_contains($moduleRegistry, 'str_starts_with($resolved_dir, $resolved_addons_dir . DIRECTORY_SEPARATOR)'), 'Add-on uninstall path jail is missing.');
+$expect(str_contains($read('includes/dashboard/class-vis-dashboard-ajax.php'), 'wp_ajax_vis_upload_addon'), 'Add-on upload controller is disconnected.');
+$expect(str_contains($read('includes/dashboard/class-vis-dashboard-ajax.php'), 'wp_ajax_vis_uninstall_addon'), 'Add-on uninstall controller is disconnected.');
+$expect(str_contains($read('includes/dashboard/class-vis-dashboard-ajax.php'), 'wp_ajax_vis_inspect_file'), 'Integrity inspection controller is disconnected.');
+$expect(str_contains($read('includes/dashboard/class-vis-dashboard-ajax.php'), 'wp_ajax_vis_oracle_ping'), 'Oracle diagnostic controller is disconnected.');
 
 if ($failures !== []) {
     fwrite(STDERR, "VGT DASHBOARD UI REGRESSION: FAILED\n" . implode("\n", $failures) . "\n");

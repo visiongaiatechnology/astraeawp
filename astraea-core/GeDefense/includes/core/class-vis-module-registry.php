@@ -61,15 +61,11 @@ final class VIS_Module_Registry {
 
     public static function get_addons_dir(): string {
         if (defined('VIS_ADDONS_DIR')) {
-            return function_exists('wp_normalize_path') ? wp_normalize_path(VIS_ADDONS_DIR) : str_replace('\\', '/', VIS_ADDONS_DIR);
+            return wp_normalize_path(VIS_ADDONS_DIR);
         }
-        $base = defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR . '/uploads' : '';
-        if (function_exists('wp_upload_dir')) {
-            $upload_dir = wp_upload_dir(null, false);
-            $base = $upload_dir['basedir'] ?? $base;
-        }
-        $normalize = function_exists('wp_normalize_path') ? 'wp_normalize_path' : static fn($p) => str_replace('\\', '/', (string)$p);
-        return $normalize($base . '/gedefense-addons');
+        $upload_dir = wp_upload_dir(null, false);
+        $addons_dir = wp_normalize_path($upload_dir['basedir'] . '/gedefense-addons');
+        return $addons_dir;
     }
 
     public static function path(string $id): string {
@@ -133,9 +129,6 @@ final class VIS_Module_Registry {
         if ($module === null) return false;
 
         $addons_dir = self::get_addons_dir();
-        $resolved_addons_dir = realpath($addons_dir);
-        if ($resolved_addons_dir === false || !is_dir($resolved_addons_dir)) return false;
-
         $folder = $module['addon_folder'];
         $candidates = [
             $addons_dir . '/' . $folder,
@@ -144,42 +137,27 @@ final class VIS_Module_Registry {
             $addons_dir . '/' . $id,
             $addons_dir . '/' . strtolower($id),
             $addons_dir . '/' . strtoupper($id),
+            VIS_PATH . 'addons/' . $folder,
+            VIS_PATH . 'addons/' . $id
         ];
 
         $deleted = false;
         foreach (array_unique($candidates) as $dir) {
-            $resolved_dir = realpath($dir);
-            if (
-                $resolved_dir === false
-                || !is_dir($resolved_dir)
-                || !str_starts_with($resolved_dir, $resolved_addons_dir . DIRECTORY_SEPARATOR)
-            ) continue;
-
-            $deleted = self::recursive_rmdir($resolved_dir, $resolved_addons_dir) || $deleted;
+            if (is_dir($dir)) {
+                self::recursive_rmdir($dir);
+                $deleted = true;
+            }
         }
         return $deleted;
     }
 
-    private static function recursive_rmdir(string $dir, string $jail): bool {
-        $resolved_dir = realpath($dir);
-        $resolved_jail = realpath($jail);
-        if (
-            $resolved_dir === false
-            || $resolved_jail === false
-            || $resolved_dir === $resolved_jail
-            || !str_starts_with($resolved_dir, $resolved_jail . DIRECTORY_SEPARATOR)
-        ) return false;
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($resolved_dir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($iterator as $item) {
-            $item_path = $item->getPathname();
-            if (!str_starts_with($item_path, $resolved_dir . DIRECTORY_SEPARATOR)) return false;
-            $removed = $item->isDir() ? @rmdir($item_path) : @unlink($item_path);
-            if (!$removed) return false;
+    public static function recursive_rmdir(string $dir): bool {
+        if (!is_dir($dir)) return false;
+        $files = array_diff(scandir($dir) ?: [], ['.', '..']);
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            is_dir($path) ? self::recursive_rmdir($path) : @unlink($path);
         }
-        return @rmdir($resolved_dir);
+        return @rmdir($dir);
     }
 }

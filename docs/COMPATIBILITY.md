@@ -1,7 +1,7 @@
 # AstraeaOS WP — Ecosystem Compatibility Strategy
 
-**Distribution:** AstraeaOS WP `0.1.0-alpha`  
-**Base:** WordPress Core 7.1 de_DE  
+**Distribution:** AstraeaOS WP `0.8.0`  
+**Base:** WordPress Core 7.1.5 de_DE  
 
 ---
 

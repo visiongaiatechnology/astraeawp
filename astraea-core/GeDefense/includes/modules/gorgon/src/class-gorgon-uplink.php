@@ -30,7 +30,7 @@ final class Gorgon_Uplink {
         $nexus_url = $this->config->get_preemptive_url();
         $api_key   = $this->config->get_api_key();
         
-        if ( '' === $nexus_url || '' === $api_key || ! $this->is_safe_target_url( $nexus_url ) ) return 0;
+        if ( '' === $nexus_url || '' === $api_key ) return 0;
 
         $json_payload = wp_json_encode([
             'site'     => $this->config->get_node_id(), 
@@ -42,14 +42,20 @@ final class Gorgon_Uplink {
         $encrypted_payload = wp_json_encode([ 'cipher' => $this->config->encrypt_payload( $json_payload ) ]);
         if ( false === $encrypted_payload ) return 0;
 
-        if ( ! class_exists('VIS_Security') || ! method_exists('VIS_Security', 'pinned_https_post') ) return 0;
-        $response = \VIS_Security::pinned_https_post( $nexus_url, $encrypted_payload, [
+        $response = wp_remote_post( $nexus_url, [
+            'body'    => $encrypted_payload,
+            'headers' => [ 
                 'X-VGT-Nexus-Auth'       => $api_key,
-                'X-VGT-Sentinel-Version' => defined('VIS_VERSION') ? VIS_VERSION : '7.4.0',
-                'X-VGT-Sentinel-Magic'   => 'vgt-magic-noc-9938-omega-fusion',
+                'X-VGT-Sentinel-Version' => defined('VIS_VERSION') ? VIS_VERSION : '8.6.0',
+                'X-VGT-Sentinel-Magic'   => defined('VIS_GORGON_NEXUS_MAGIC') ? VIS_GORGON_NEXUS_MAGIC : '',
                 'Content-Type'           => 'application/json',
                 'Connection'             => 'close' 
-            ], 2, 131072 );
+            ],
+            'timeout'   => 2,
+            'limit_response_size' => 262144,
+            'sslverify' => true,
+            'redirection' => 0,
+        ]);
 
         if ( is_wp_error( $response ) ) return 0;
 
@@ -71,7 +77,7 @@ final class Gorgon_Uplink {
         $nexus_url = $this->config->get_nexus_url();
         $api_key   = $this->config->get_api_key();
         
-        if ( '' === $nexus_url || '' === $api_key || ! $this->is_safe_target_url( $nexus_url ) ) return null;
+        if ( '' === $nexus_url || '' === $api_key ) return null;
 
         // Build plain JSON envelope — Go backend accepts {site, vectors, pull} directly
         $json_payload = wp_json_encode([
@@ -85,14 +91,20 @@ final class Gorgon_Uplink {
             return null;
         }
 
-        if ( ! class_exists('VIS_Security') || ! method_exists('VIS_Security', 'pinned_https_post') ) return null;
-        $response = \VIS_Security::pinned_https_post( $nexus_url, $json_payload, [
+        $response = wp_remote_post( $nexus_url, [
+            'body'    => $json_payload,
+            'headers' => [ 
                 'X-VGT-Nexus-Auth'       => $api_key,
-                'X-VGT-Sentinel-Version' => defined('VIS_VERSION') ? VIS_VERSION : '7.4.0',
-                'X-VGT-Sentinel-Magic'   => 'vgt-magic-noc-9938-omega-fusion',
+                'X-VGT-Sentinel-Version' => defined('VIS_VERSION') ? VIS_VERSION : '8.6.0',
+                'X-VGT-Sentinel-Magic'   => defined('VIS_GORGON_NEXUS_MAGIC') ? VIS_GORGON_NEXUS_MAGIC : '',
                 'Content-Type'           => 'application/json',
                 'Connection'             => 'close',
-            ], 20, 1048576 );
+            ],
+            'timeout'   => 20,
+            'limit_response_size' => 262144,
+            'sslverify' => true,
+            'redirection' => 0,
+        ]);
 
         if ( is_wp_error( $response ) ) {
             error_log('VGT GORGON SYNC ERROR (NET): ' . $response->get_error_message());
@@ -102,27 +114,8 @@ final class Gorgon_Uplink {
         if ( wp_remote_retrieve_response_code($response) !== 200 ) return null;
 
         $body = wp_remote_retrieve_body( $response );
-        $sig = (string) wp_remote_retrieve_header( $response, 'x-vgt-nexus-signature' );
-        $expectedSig = hash_hmac( 'sha256', $body, $api_key );
-        if ( strlen($sig) !== 64 || ! ctype_xdigit($sig) || ! hash_equals( $expectedSig, strtolower($sig) ) ) {
-            error_log('VGT GORGON SYNC SECURITY: Missing or invalid Nexus HMAC response signature. Rejected.');
-            return null;
-        }
-
         $result = json_decode( $body, true );
         return is_array($result) ? $result : null;
-    }
-
-    private function is_safe_target_url( string $url ): bool {
-        $parts = parse_url($url);
-        if (!is_array($parts) || strtolower((string)($parts['scheme'] ?? '')) !== 'https' || isset($parts['user']) || isset($parts['pass'])) return false;
-        $host = (string)($parts['host'] ?? '');
-        if ($host === '' || !class_exists('VIS_Security')) return false;
-        try {
-            return \VIS_Security::validate_public_http_url($url, true) !== '';
-        } catch (\Throwable) {
-            return false;
-        }
     }
 
     private function is_valid_json( string $string ): bool {

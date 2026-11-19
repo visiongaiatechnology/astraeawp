@@ -4,14 +4,63 @@ declare(strict_types=1);
 if (!defined('ABSPATH')) exit('VGT_ACCESS_DENIED');
 
 // STATUS: PLATIN
-class AppException        extends Exception {}
-class ValidationException extends AppException {}
-class SecurityException   extends AppException {}
-class StorageException    extends AppException {}
+if (!class_exists('AppException')) {
+    class AppException extends Exception {}
+}
+if (!class_exists('ValidationException')) {
+    class ValidationException extends AppException {}
+}
+if (!class_exists('SecurityException')) {
+    class SecurityException extends AppException {}
+}
+if (!class_exists('StorageException')) {
+    class StorageException extends AppException {}
+}
+
+// Namespaced aliases for zero collision risk across external plugins/libraries
+if (!class_exists('VisionGaia\\GeDefense\\Exceptions\\SecurityException')) {
+    class_alias('SecurityException', 'VisionGaia\\GeDefense\\Exceptions\\SecurityException');
+    class_alias('StorageException', 'VisionGaia\\GeDefense\\Exceptions\\StorageException');
+    class_alias('ValidationException', 'VisionGaia\\GeDefense\\Exceptions\\ValidationException');
+    class_alias('AppException', 'VisionGaia\\GeDefense\\Exceptions\\AppException');
+}
 
 final class VIS_Security {
 
     private const PRIVATE_HOSTS = ['localhost', 'localhost.localdomain'];
+
+    /**
+     * Derive a per-installation key for a purpose.
+     *
+     * Uses the WordPress salts when present and falls back to a persisted
+     * random value. This replaces the former hard-coded literals ("fallback
+     * salts") that made every installation share the same key material.
+     */
+    public static function install_key(string $purpose): string {
+        $purpose = preg_replace('/[^a-z0-9_.-]/', '', strtolower($purpose)) ?: 'default';
+
+        $base = '';
+        if (function_exists('wp_salt')) {
+            $base = (string)wp_salt('auth');
+        }
+        if ($base === '' && defined('AUTH_KEY') && is_string(AUTH_KEY) && AUTH_KEY !== '' && AUTH_KEY !== 'put your unique phrase here') {
+            $base = (string)AUTH_KEY;
+        }
+        if ($base === '') {
+            $stored = (string)get_option('vis_install_entropy', '');
+            if (!preg_match('/^[a-f0-9]{64}$/', $stored)) {
+                $stored = bin2hex(random_bytes(32));
+                add_option('vis_install_entropy', $stored, '', false);
+                $persisted = (string)get_option('vis_install_entropy', '');
+                if (preg_match('/^[a-f0-9]{64}$/', $persisted)) {
+                    $stored = $persisted;
+                }
+            }
+            $base = $stored;
+        }
+
+        return hash_hmac('sha256', 'vgt-install-key|' . $purpose, $base, true);
+    }
 
     public static function normalize_relative_path(string $path): string {
         $path = wp_normalize_path(str_replace("\0", '', $path));
@@ -199,97 +248,6 @@ final class VIS_Security {
             return new WP_Error('vgt_peer_mismatch', 'Remote peer verification failed.');
         }
 
-        return ['headers' => $headers, 'body' => $body, 'response' => ['code' => $status, 'message' => '']];
-    }
-
-    /**
-     * DNS-rebinding-resistant HTTPS POST with a bounded request and response.
-     *
-     * @param array<string,string> $request_headers
-     * @return array{headers:array<string,string>,body:string,response:array{code:int,message:string}}|WP_Error
-     */
-    public static function pinned_https_post(string $url, string $request_body, array $request_headers, int $timeout, int $max_bytes): array|WP_Error {
-        if (!function_exists('curl_init') || !defined('CURLOPT_RESOLVE')) {
-            return new WP_Error('vgt_secure_transport_unavailable', 'Secure remote transport unavailable.');
-        }
-        if ($timeout < 1 || $timeout > 30 || $max_bytes < 1 || $max_bytes > 16777216 || strlen($request_body) > 1048576) {
-            return new WP_Error('vgt_transport_boundary', 'Remote transport boundary rejected.');
-        }
-        try {
-            $safe_url = self::validate_public_http_url($url, true);
-        } catch (Throwable) {
-            return new WP_Error('vgt_rejected_url', 'Remote URL rejected.');
-        }
-
-        $parts = wp_parse_url($safe_url);
-        $host = strtolower(rtrim((string)($parts['host'] ?? ''), '.'));
-        $port = isset($parts['port']) ? (int)$parts['port'] : 443;
-        $ips = self::resolve_host_ips($host);
-        $public_ips = array_values(array_filter($ips, [self::class, 'is_public_ip']));
-        if ($public_ips === [] || count($public_ips) !== count($ips)) {
-            return new WP_Error('vgt_rejected_resolution', 'Remote host resolution rejected.');
-        }
-
-        $curl_headers = [];
-        foreach ($request_headers as $name => $value) {
-            if (preg_match('/\A[A-Za-z0-9-]{1,64}\z/D', $name) !== 1 || preg_match('/[\r\n]/', $value) === 1 || strlen($value) > 8192) {
-                return new WP_Error('vgt_rejected_header', 'Remote request header rejected.');
-            }
-            $curl_headers[] = $name . ': ' . $value;
-        }
-
-        $ip = $public_ips[0];
-        $resolve_ip = str_contains($ip, ':') ? '[' . $ip . ']' : $ip;
-        $headers = [];
-        $body = '';
-        $overflow = false;
-        $handle = curl_init();
-        if ($handle === false) return new WP_Error('vgt_transport_init', 'Secure remote transport unavailable.');
-
-        curl_setopt_array($handle, [
-            CURLOPT_URL => $safe_url,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $request_body,
-            CURLOPT_HTTPHEADER => $curl_headers,
-            CURLOPT_RETURNTRANSFER => false,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_CONNECTTIMEOUT => min(10, $timeout),
-            CURLOPT_TIMEOUT => $timeout,
-            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
-            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_RESOLVE => [sprintf('%s:%d:%s', $host, $port, $resolve_ip)],
-            CURLOPT_HEADERFUNCTION => static function($curl, string $line) use (&$headers): int {
-                $length = strlen($line);
-                $position = strpos($line, ':');
-                if ($position !== false) {
-                    $name = strtolower(trim(substr($line, 0, $position)));
-                    $value = trim(substr($line, $position + 1));
-                    if ($name !== '' && strlen($value) <= 8192) $headers[$name] = $value;
-                }
-                return $length;
-            },
-            CURLOPT_WRITEFUNCTION => static function($curl, string $chunk) use (&$body, &$overflow, $max_bytes): int {
-                if (strlen($body) + strlen($chunk) > $max_bytes) {
-                    $overflow = true;
-                    return 0;
-                }
-                $body .= $chunk;
-                return strlen($chunk);
-            },
-        ]);
-        $executed = curl_exec($handle);
-        $status = (int)curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
-        $primary_ip = (string)curl_getinfo($handle, CURLINFO_PRIMARY_IP);
-        $error = curl_error($handle);
-        curl_close($handle);
-
-        if ($overflow) return new WP_Error('vgt_response_too_large', 'Remote response exceeded boundary.');
-        if ($executed === false || $error !== '') return new WP_Error('vgt_transport_failed', 'Secure remote request failed.');
-        if (!self::is_public_ip($primary_ip) || !in_array($primary_ip, $public_ips, true)) {
-            return new WP_Error('vgt_peer_mismatch', 'Remote peer verification failed.');
-        }
         return ['headers' => $headers, 'body' => $body, 'response' => ['code' => $status, 'message' => '']];
     }
 

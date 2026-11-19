@@ -1,6 +1,6 @@
 # Astraea Mail Gateway
 
-**Distribution:** AstraeaOS WP 0.6.0-alpha  
+**Distribution:** AstraeaOS WP 0.8.0  
 **Module:** Astraea Mail Gateway 1.0.0-alpha  
 **Architecture:** kernel-native, zero external runtime dependencies
 

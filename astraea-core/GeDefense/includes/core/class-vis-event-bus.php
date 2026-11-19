@@ -7,6 +7,9 @@ final class VIS_Event_Bus {
 
     private const MAX_MESSAGE_BYTES = 4000;
     private static bool $mounted = false;
+    private static bool $retention_scheduled = false;
+    /** @var array<string, bool> */
+    private static array $request_seen = [];
 
     public static function init(): void {
         if (self::$mounted) {
@@ -15,9 +18,42 @@ final class VIS_Event_Bus {
 
         self::$mounted = true;
         add_action('vgt_sentinel_event', [self::class, 'ingest'], 10, 1);
+        add_action('vis_log_retention_cleanup', [self::class, 'cleanup']);
+        if (function_exists('wp_next_scheduled') && !wp_next_scheduled('vis_log_retention_cleanup')) {
+            wp_schedule_event(time() + 3600, 'daily', 'vis_log_retention_cleanup');
+        }
+    }
+
+    /**
+     * Bounded retention for high-volume human-readable log tables. XDR has its
+     * own immutable retention; these tables are operational noise and otherwise
+     * grow unbounded (observed: >576k Prometheus rows on one production site).
+     */
+    public static function cleanup(): void {
+        global $wpdb;
+        if (!isset($wpdb) || !($wpdb instanceof \wpdb)) return;
+
+        $days = (int) apply_filters('vis_log_retention_days', 30);
+        $days = max(7, min(365, $days));
+        $cutoff = gmdate('Y-m-d H:i:s', time() - ($days * 86400));
+
+        foreach (['vis_omega_logs', 'vis_prometheus_logs', 'vis_styx_logs', 'vis_nemesis_logs', 'vis_oracle_patterns'] as $suffix) {
+            $table = $wpdb->prefix . $suffix;
+            $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+            if ($exists !== $table) continue;
+            $wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE timestamp < %s LIMIT 20000", $cutoff));
+        }
     }
 
     public static function emit(string $module, string $type, string $message, array $context = [], int $severity = 1): void {
+        if (!self::$retention_scheduled && function_exists('wp_next_scheduled')) {
+            self::$retention_scheduled = true;
+            add_action('vis_log_retention_cleanup', [self::class, 'cleanup']);
+            if (!wp_next_scheduled('vis_log_retention_cleanup')) {
+                wp_schedule_event(time() + 3600, 'daily', 'vis_log_retention_cleanup');
+            }
+        }
+
         self::ingest([
             'module'   => $module,
             'type'     => $type,
@@ -37,15 +73,25 @@ final class VIS_Event_Bus {
         $severity = max(1, min(10, (int)($event['severity'] ?? 1)));
         $message = self::message((string)($event['message'] ?? ''));
         $context = is_array($event['context'] ?? null) ? $event['context'] : [];
-        $safeContext = self::scrub_context($context);
+
+        // A single request can pass the same finding through AEGIS, Trinity and
+        // the legacy logger. Persist it once per module/type/message/IP.
+        $dedupe_key = hash('sha256', $module . '|' . $type . '|' . $message . '|' . $ip . '|' . $severity);
+        if (isset(self::$request_seen[$dedupe_key])) {
+            return;
+        }
+        if (count(self::$request_seen) < 200) {
+            self::$request_seen[$dedupe_key] = true;
+        }
 
         // Astraea evidence bridge: emit only sanitized data, never raw secrets.
+        $safeContext = self::scrub_context($context);
         if (function_exists('do_action')) {
             do_action('astraea_gedefense_security_event', [
-                'module' => $module,
-                'type' => $type,
-                'message' => $message,
-                'context' => $safeContext,
+                'module'   => $module,
+                'type'     => $type,
+                'message'  => $message,
+                'context'  => $safeContext,
                 'severity' => $severity,
             ]);
         }
@@ -70,8 +116,9 @@ final class VIS_Event_Bus {
         $limit_key = 'vgt_log_flood_' . md5($ip);
         $attempts = (int) get_transient($limit_key);
         if ($attempts >= 10) {
-            if ($attempts === 10) {
-                // Log warning once that this IP is throttled for human logs
+            $notice_key = 'vgt_log_flood_notice_' . md5($ip);
+            if (!get_transient($notice_key)) {
+                set_transient($notice_key, 1, 3600);
                 $wpdb->insert(
                     $wpdb->prefix . (defined('VIS_TABLE_LOGS') ? VIS_TABLE_LOGS : 'vis_omega_logs'),
                     [
@@ -84,7 +131,6 @@ final class VIS_Event_Bus {
                     ],
                     ['%s', '%s', '%s', '%s', '%d', '%s']
                 );
-                set_transient($limit_key, 11, 60); 
             }
             return;
         }
@@ -92,7 +138,7 @@ final class VIS_Event_Bus {
 
         if ($context !== []) {
             try {
-                $encoded = wp_json_encode($safeContext, JSON_THROW_ON_ERROR);
+                $encoded = wp_json_encode(self::scrub_context($context), JSON_THROW_ON_ERROR);
                 $message .= ' | ctx=' . $encoded;
             } catch (\Throwable $e) {
                 $message .= ' | ctx=unavailable';
@@ -107,6 +153,17 @@ final class VIS_Event_Bus {
         $message = wp_strip_all_tags($message);
 
         $table = $wpdb->prefix . (defined('VIS_TABLE_LOGS') ? VIS_TABLE_LOGS : 'vis_omega_logs');
+
+        // Security telemetry is written by GeDefense itself. Mark it as an
+        // internal Morpheus action so the capability guard cannot flag its own
+        // log tables as an "unassigned table" write of the requesting plugin.
+        $morpheus_class = '\VisionGaia\GeDefense\Modules\Morpheus\Morpheus';
+        $previous_internal = false;
+        if (class_exists($morpheus_class)) {
+            $previous_internal = $morpheus_class::$is_internal_action;
+            $morpheus_class::$is_internal_action = true;
+        }
+
         $wpdb->insert(
             $table,
             [
@@ -119,6 +176,10 @@ final class VIS_Event_Bus {
             ],
             ['%s', '%s', '%s', '%s', '%d', '%s']
         );
+
+        if (class_exists($morpheus_class)) {
+            $morpheus_class::$is_internal_action = $previous_internal;
+        }
     }
 
     private static function token(string $value, int $limit): string {
@@ -128,7 +189,13 @@ final class VIS_Event_Bus {
     }
 
     private static function ip(string $value): string {
-        return filter_var($value, FILTER_VALIDATE_IP) ? $value : '0.0.0.0';
+        if (filter_var($value, FILTER_VALIDATE_IP)) {
+            return $value;
+        }
+        if ((defined('WP_CLI') && WP_CLI) || (defined('DOING_CRON') && DOING_CRON)) {
+            return 'CLI';
+        }
+        return '0.0.0.0';
     }
 
     private static function message(string $value): string {

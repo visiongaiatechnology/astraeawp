@@ -32,10 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 url.searchParams.set('styx_section', sec);
                 window.history.replaceState({}, '', url.toString());
             }
-            const secInput = document.getElementById('vis_styx_section_input');
-            if (secInput) {
-                secInput.value = tabId === 'styx-threat-intel' ? 'threat_intel' : 'outbound';
-            }
         }
 
         styxTabs.forEach(function(tab) {

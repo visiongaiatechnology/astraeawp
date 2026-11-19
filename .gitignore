@@ -1,31 +1,62 @@
-# Local environment shims & temporary files
-powershell.cmd
-.DS_Store
+# --- AstraeaOS WP — public repository hygiene -------------------------------
+# Purpose: keep local runtime state, secrets, build output and internal
+# working notes out of the published repository.
+#
+# Note on anchoring: patterns that are meant for the repository root use a
+# leading "/" so they cannot accidentally match WordPress internals such as
+# wp-includes/js/dist/ or wp-includes/css/dist/.
+
+# Local configuration and secrets -------------------------------------------
+/wp-config.php
+/wp-config-local.php
+.env
+.env.*
+*.pem
+*.key
+*.keys
+/master.key
+/historical.keys
+/.astraea-secrets/
+
+# WordPress / Astraea runtime state -----------------------------------------
+/wp-content/uploads/*
+!/wp-content/uploads/.gitkeep
+/wp-content/cache/
+/wp-content/upgrade/
+/wp-content/upgrade-temp-backup/
+/wp-content/astraea-vault-snapshots/
+/wp-content/vgt-vault/
+/wp-content/backup-*
+/wp-content/advanced-cache.php
+/wp-content/object-cache.php
+/wp-content/debug.log
+*.log
+
+# Build and release output (published as GitHub release assets, not as source)
+/dist/
+/*.zip
+
+# Internal working notes / agent hand-off documents — never published -------
+# (RELEASE_NOTES.md is public documentation and must NOT match these rules.)
+/Next.md
+/NEXT.md
+/Handoff.md
+/HANDOFF.md
+/Handoff_*.md
+/WORKLOG.md
+/WORKLOG*.md
+/SESSION_NOTES.md
+/DEV_NOTES.md
+/lab-results*/
+/Lab-Testbericht*.md
+
+# OS / editor artifacts ------------------------------------------------------
 Thumbs.db
-*.tmp
-*.zip
-*.rar
-BUILD-MANIFEST.json
-
-# Runtime state must never enter a source or release artifact.
-wp-content/uploads/
-wp-content/vgt-vault/
-astraea-core/GeDefense/vault-storage/
-
-# GeDefense was imported with flattened Git internals. Keep them out of builds.
-astraea-core/GeDefense/objects/
-astraea-core/GeDefense/refs/
-astraea-core/GeDefense/hooks/
-astraea-core/GeDefense/info/
-astraea-core/GeDefense/logs/
-astraea-core/GeDefense/COMMIT_EDITMSG
-astraea-core/GeDefense/FETCH_HEAD
-astraea-core/GeDefense/HEAD
-astraea-core/GeDefense/ORIG_HEAD
-astraea-core/GeDefense/config
-astraea-core/GeDefense/description
-astraea-core/GeDefense/index
-
-powershell.exe
-dist/
-
+ehthumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

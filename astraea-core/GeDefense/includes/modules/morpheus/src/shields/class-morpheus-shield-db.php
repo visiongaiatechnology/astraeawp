@@ -70,7 +70,10 @@ final class Morpheus_Shield_DB {
         $target_tables = $this->extract_ast_dml_targets( $query );
 
         if ( empty( $target_tables ) ) {
-            $this->ui->execute_kill( $caller, 'DB_AST_PARSE_FAILURE', 'Unrecognized DML syntax, Subquery obfuscation, or Hex-Evasion detected.' );
+            // Unknown/complex but syntactically valid DML (CTEs, JOIN updates,
+            // multi-table statements) must not be treated as an attack. Keep it
+            // observable, never hard-kill a legitimate request.
+            $this->ui->log_audit_trace( $caller, 'DB_PARSE_UNKNOWN', 'DML target could not be classified; query passed through.' );
             return $query;
         }
 
@@ -100,11 +103,11 @@ final class Morpheus_Shield_DB {
      */
     private function is_core_api_proxy(): bool {
         $stack = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 15 );
+        // Nur tatsächlich vom State Shield geprüfte Options/Transients ausnehmen;
+        // User-/Meta-/Site-Option-APIs unterliegen weiterhin voller DB-Shield-Prüfung (FIND-013).
         $safe_apis = [
-            'add_option', 'update_option', 'delete_option', 'get_option', 
-            'add_site_option', 'update_site_option', 'delete_site_option', 'get_site_option',
-            'add_metadata', 'update_metadata', 'delete_metadata', 'get_metadata', 
-            'wp_insert_user', 'wp_update_user', 'wp_delete_user',
+            'add_option', 'update_option', 'delete_option', 'get_option',
+            'get_site_option', 'get_metadata',
             'set_transient', 'get_transient', 'delete_transient',
             'set_site_transient', 'get_site_transient', 'delete_site_transient'
         ];

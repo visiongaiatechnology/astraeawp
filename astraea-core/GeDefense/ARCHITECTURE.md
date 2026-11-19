@@ -1,5 +1,12 @@
 # Architecture
 
+> **Current release: 8.6.0** (2026-11-17). Security-hardening releases 8.4.4/8.4.5/8.6.0:
+> fail-closed vault crypto, stricter WAF capability policy, nonce-gated language switching,
+> threat-feed quarantine, bounded resource limits, hardening regression suite, and a
+> corrected platform floor of PHP 8.2 (PHP 8.1 reached end of life).
+> See [CHANGELOG.md](CHANGELOG.md) for details.
+
+
 ## Architekturindex
 - [Systemübersicht](#systemübersicht)
 - [1. Globaler Architekturbaum](#1-globaler-architekturbaum)
@@ -314,8 +321,6 @@ GEDEFENSE WP - OPEN CORE (STANDARD WORDPRESS PLUGIN)
 ### 2.5 Scanner & Malware Engine (`includes/scanner/`)
 - `class-vis-scanner-engine.php`: Paginierter Dateiscanner für den gesamten Web-Root mit Baseline-Speicherung in `VIS_VAULT_DIR`.
 - `class-vis-malware-engine.php`: Shared Detector Engine für syntaktische und heuristische Bedrohungsanalysen.
-- Scanner-Findings sind evidence-basiert in `MALWARE`, `SUSPICIOUS`, `POLICY` und `INFO` getrennt. Numerischer Risiko-Score allein erzeugt keinen Malware-Verdict. Nur explizite `MALWARE`-Evidence kann den Block-/Quarantänepfad auslösen.
-- Pfad-, PHP/JS- und SVG/XML-Detektoren sind kontextsensitiv: Source-Namespace-Verzeichnisse wie `src/Backup/`, harmlose Guard-Dateien, Kommentar-/String-Testfixtures, SVG-DOCTYPEs und Parsefehler werden nicht als aktive Malware behauptet.
 - `detectors/class-vis-php-lexical-detector.php`: Token-basierter AST-Scanner für Backdoors, Obfuskation und `eval()`.
 - `detectors/class-vis-polyglot-detector.php`: Prüft Bilder und Archive auf eingebetteten PHP-Code.
 - `detectors/class-vis-svg-xml-detector.php`: XML-Parser zur Erkennung von SVG-basiertem XSS und XXE.
@@ -564,6 +569,11 @@ Tests:
 
 ### Wird verwendet von
 - `VIS_Bootstrapper::engage_phase_1()` (Priority 1)
+
+### AEGIS Oracle - KI 
+- Anbindung an Groq
+- OSS 20B Safeguard für Sicherheitschecks 
+- [Datenblatt](https://console.groq.com/docs/model/openai/gpt-oss-safeguard-20b)
 
 ---
 
@@ -2606,4 +2616,4 @@ Im Rahmen der Code-Analyse wurden folgende architektonische Besonderheiten ident
    - *Sicherheitsbegründung*: Diese Kopplungen sind beabsichtigt, da im L0-L1 Abwehrfall eine direkte atomare Weiterleitung von WAF-Entscheidungen an den Sperrfilter erforderlich ist, um Latenzen zu minimieren.
 
 ---
-*Dokument generiert und verifiziert für GeDefense WP - Open Core (Standard WordPress Plugin v8.1.0).*
+*Dokument generiert und verifiziert für GeDefense WP - Open Core (Standard WordPress Plugin v8.1.3).*

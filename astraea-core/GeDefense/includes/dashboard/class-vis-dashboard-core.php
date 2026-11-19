@@ -4,20 +4,15 @@ declare(strict_types=1);
 if (!defined('ABSPATH')) exit('VGT_ACCESS_DENIED');
 
 final class VIS_Dashboard_Core {
-    private static bool $booted = false;
     private string $page_hook = '';
 
     public function __construct() {
-        if (self::$booted) {
-            return;
-        }
-        self::$booted = true;
-
         $this->load_dependencies();
 
         add_action('admin_menu', [$this, 'register_menu_matrix'], 9);
         add_action('admin_init', ['VIS_Dashboard_Settings', 'process_mutations']);
         add_action('admin_enqueue_scripts', [$this, 'inject_assets']);
+        add_action('admin_head', [$this, 'inject_menu_icon_styles']);
         add_action('admin_notices', [$this, 'display_setup_wizard_notice']);
         add_action('admin_notices', [$this, 'display_admin_whitelist_notice']);
 
@@ -25,7 +20,10 @@ final class VIS_Dashboard_Core {
         // Existing upgraded installations without a Genesis state keep the legacy behavior.
         $genesisState = (string)get_option('astraea_install_state', '');
         if (!get_option('vgt_setup_wizard_completed') && ($genesisState === '' || $genesisState === 'READY')) {
-            update_option('vgt_setup_wizard_completed', 1);
+            $vis_config = get_option('vis_config', []);
+            if (!empty($vis_config['aegis_enabled']) || !empty($vis_config['titan_enabled']) || get_option('vis_zeus_config')) {
+                update_option('vgt_setup_wizard_completed', 1);
+            }
         }
         
         VIS_Dashboard_Ajax::mount_endpoints();
@@ -44,9 +42,17 @@ final class VIS_Dashboard_Core {
     }
 
     public function display_setup_wizard_notice(): void {
-        if (!get_option('vgt_setup_wizard_completed')) return;
-        // In AstraeaOS, setup wizard is pre-completed.
-        return;
+        if (!current_user_can('manage_options')) return;
+        if (get_option('vgt_setup_wizard_completed')) return;
+        
+        if (isset($_GET['page']) && $_GET['page'] === 'vgt-suite' && isset($_GET['tab']) && $_GET['tab'] === 'setup_wizard') {
+            return;
+        }
+
+        echo '<div class="notice notice-warning is-dismissible" style="border-left-color: #3b82f6; padding: 12px 20px;">';
+        echo '<p style="font-size: 14px; margin: 0 0 8px 0; color: #1e293b;"><strong>' . esc_html__('Willkommen bei GeDefense WP!', 'vgt-sentinel') . '</strong> — ' . esc_html__('Bitte führen Sie den Einrichtungs-Assistenten aus, um die grundlegenden Sicherheitsvorkehrungen und das IP-Whitelisting zu konfigurieren.', 'vgt-sentinel') . '</p>';
+        echo '<p style="margin: 0;"><a href="' . esc_url(admin_url('admin.php?page=vgt-suite&tab=setup_wizard')) . '" class="button button-primary" style="background: #3b82f6; border-color: #3b82f6; color: #fff; text-decoration: none;">' . esc_html__('Einrichtungs-Assistenten starten &rarr;', 'vgt-sentinel') . '</a></p>';
+        echo '</div>';
     }
 
     public function display_admin_whitelist_notice(): void {
@@ -57,23 +63,25 @@ final class VIS_Dashboard_Core {
 
         $config = get_option('vis_config', []);
         $config = is_array($config) ? $config : [];
+        $aegisCovered = $this->whitelist_contains((string)($config['aegis_whitelist_ips'] ?? ''), $ip);
+        $prometheusCovered = $this->whitelist_contains((string)($config['prometheus_whitelist_ips'] ?? ''), $ip);
+        if ($aegisCovered && $prometheusCovered) return;
 
-        // Auto-whitelist current authenticated admin so they are never blocked or alarmed
-        $changed = false;
-        if (!$this->whitelist_contains((string)($config['aegis_whitelist_ips'] ?? ''), $ip)) {
-            $currentAegis = trim((string)($config['aegis_whitelist_ips'] ?? ''));
-            $config['aegis_whitelist_ips'] = $currentAegis !== '' ? $currentAegis . "\n" . $ip : $ip;
-            $changed = true;
+        $aegisUrl = admin_url('admin.php?page=vgt-suite&tab=aegis');
+        $prometheusUrl = admin_url('admin.php?page=vgt-suite&tab=prometheus');
+        $missing = [];
+        if (!$aegisCovered) $missing[] = 'AEGIS';
+        if (!$prometheusCovered) $missing[] = 'PROMETHEUS';
+
+        echo '<div class="notice notice-error" style="border-left-color:#dc2626;padding:14px 20px;">';
+        echo '<p style="font-size:14px;margin:0 0 8px;color:#7f1d1d;"><strong>' . esc_html__('ADMIN-IP SCHUTZGATE AKTIV', 'vgt-sentinel') . '</strong> — ' . esc_html__('Bevor Sie Seiten veröffentlichen, WordPress aktualisieren oder Schutzmodule aktivieren: Tragen Sie die IP dieser Admin-Sitzung in die Whitelists von AEGIS und Prometheus ein.', 'vgt-sentinel') . '</p>';
+        echo '<p style="margin:0 0 10px;color:#7f1d1d;">' . esc_html(sprintf(__('Erkannte Admin-IP: %s. Fehlende Freigabe: %s. Ohne beide Freigaben können REST-, Nonce- und Update-Anfragen blockiert werden.', 'vgt-sentinel'), $ip, implode(', ', $missing))) . '</p>';
+        echo '<p style="margin:0;display:flex;gap:8px;flex-wrap:wrap;">';
+        if (!get_option('vgt_setup_wizard_completed')) {
+            echo '<a class="button button-primary" href="' . esc_url(admin_url('admin.php?page=vgt-suite&tab=setup_wizard')) . '">' . esc_html__('Setup-Wizard öffnen', 'vgt-sentinel') . '</a>';
         }
-        if (!$this->whitelist_contains((string)($config['prometheus_whitelist_ips'] ?? ''), $ip)) {
-            $currentProm = trim((string)($config['prometheus_whitelist_ips'] ?? ''));
-            $config['prometheus_whitelist_ips'] = $currentProm !== '' ? $currentProm . "\n" . $ip : $ip;
-            $changed = true;
-        }
-        if ($changed) {
-            update_option('vis_config', $config);
-        }
-        return;
+        echo '<a class="button" href="' . esc_url($aegisUrl) . '">' . esc_html__('AEGIS-Whitelist', 'vgt-sentinel') . '</a><a class="button" href="' . esc_url($prometheusUrl) . '">' . esc_html__('Prometheus-Whitelist', 'vgt-sentinel') . '</a></p>';
+        echo '</div>';
     }
 
     private function resolve_admin_ip(): string {
@@ -156,5 +164,31 @@ final class VIS_Dashboard_Core {
         $page = isset($_GET['page']) && is_string($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         if (!in_array($page, $allowed_pages, true) && $current_hook !== $this->page_hook) return;
         VIS_Dashboard_Assets::enqueue();
+    }
+
+    public function inject_menu_icon_styles(): void {
+        echo '<style id="vgt-menu-icon-style">
+            #adminmenu #toplevel_page_vgt-suite .wp-menu-image img,
+            #adminmenu .toplevel_page_vgt-suite .wp-menu-image img,
+            #adminmenu a[href*="page=vgt-suite"] .wp-menu-image img {
+                width: 20px !important;
+                height: 20px !important;
+                max-width: 20px !important;
+                max-height: 20px !important;
+                padding: 7px 0 0 0 !important;
+                object-fit: contain !important;
+                box-sizing: content-box !important;
+                display: inline-block !important;
+                opacity: 0.85;
+                transition: opacity 0.2s ease, transform 0.2s ease;
+            }
+            #adminmenu #toplevel_page_vgt-suite:hover .wp-menu-image img,
+            #adminmenu .toplevel_page_vgt-suite:hover .wp-menu-image img,
+            #adminmenu #toplevel_page_vgt-suite.wp-has-current-submenu .wp-menu-image img,
+            #adminmenu .toplevel_page_vgt-suite.wp-has-current-submenu .wp-menu-image img {
+                opacity: 1 !important;
+                transform: scale(1.08);
+            }
+        </style>';
     }
 }

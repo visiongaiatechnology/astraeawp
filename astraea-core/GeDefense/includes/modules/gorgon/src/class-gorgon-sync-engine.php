@@ -117,7 +117,6 @@ final class Gorgon_Sync_Engine {
     }
 
     private function persist_threat_matrix( array $matrix_data ): void {
-        $matrix_data = Gorgon_Pattern_Dsl::sanitize_matrix($matrix_data);
         $vault_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/vgt-vault/gorgon/' : ABSPATH . 'wp-content/vgt-vault/gorgon/';
         $matrix_file = wp_normalize_path( $vault_dir . 'nexus_matrix.json' );
 
@@ -151,26 +150,43 @@ final class Gorgon_Sync_Engine {
             }
         }
 
-        // Retire the legacy remote-PCRE channel. The persisted literal-v1 matrix is
-        // the sole remotely supplied matching input accepted by Aegis.
-        delete_option('vgt_learning_regex');
-        wp_cache_delete('vgt_learning_regex', 'vgt');
-        return;
-
         if ( ! empty( $matrix_data['meta_regex']['all'] ) ) {
+            // Unsignierte Remote-PCREs ohne explizite HMAC-Prüfung nicht mehr kompilieren (FIND-007);
+            // falls eine signierte Signatur vorliegt, ReDoS-Muster inkl. Backreferences/Recursion strikt abweisen.
             $raw_regex = trim( (string) $matrix_data['meta_regex']['all'] );
-            $safe_regex = str_replace( '#', '\#', $raw_regex );
-            $singularity = '#(*LIMIT_MATCH=5000)(*LIMIT_DEPTH=128)' . $safe_regex . '#is';
+            $signature = is_string($matrix_data['meta_regex']['sig'] ?? null) ? $matrix_data['meta_regex']['sig'] : '';
+            $apiKey    = $this->config->get_api_key();
+            if ($apiKey === '' || $signature === '' || !hash_equals(hash_hmac('sha256', $raw_regex, $apiKey), strtolower($signature))) {
+                error_log('VGT GORGON SECURITY: Unsigned or invalid remote meta_regex rejected.');
+                return;
+            }
+            $safe_regex = preg_replace('/(?<!\\\\)#/', '\\#', $raw_regex) ?? '';
+            $singularity = '#' . $safe_regex . '#is';
             
-            // Limit max pattern length
-            if ( strlen( $singularity ) > 1024 ) return;
+            if ( strlen( $singularity ) > 2048 || $safe_regex === '' ) return;
+            if ( preg_match('/(\([^)]*[\+\*\{][^)]*\)[\+\*\{]|\\\\[1-9]|\(\?R\)|\(\?<\w+>)/i', $raw_regex) ) return;
 
-            if ( str_contains($raw_regex, '(*') || preg_match('/\\\\[1-9]|\\(\\?(?:R|0|&|P>)/i', $raw_regex) ) return;
+            $is_valid_regex = false;
+            $original_backtrack = ini_get('pcre.backtrack_limit');
+            
+            try {
+                set_error_handler(static function($errno, $errstr) { throw new \RuntimeException($errstr); });
+                ini_set('pcre.backtrack_limit', '10000');
+                
+                $toxic_payload = str_repeat('a', 500) . str_repeat('B', 500) . str_repeat('1', 500) . '!';
+                $is_valid_regex = ( false !== preg_match($singularity, $toxic_payload) && preg_last_error() === PREG_NO_ERROR );
+                
+            } catch (\Throwable $t) {
+                $is_valid_regex = false;
+            } finally {
+                ini_set('pcre.backtrack_limit', (string)$original_backtrack);
+                restore_error_handler();
+            }
 
-            // Strict anti-ReDoS: block nested and overlapping quantifiers
-            if ( preg_match('/(\([^)]*[\+\*\{][^)]*\))[\+\*\{]/', $raw_regex) ) return;
-            if ( preg_match('/\((?:[^()|]+\|)+[^()|]+\)[\+\*\{]/', $raw_regex) ) return;
-
+            if ( $is_valid_regex ) {
+                update_option( 'vgt_learning_regex', $singularity );
+                wp_cache_set( 'vgt_learning_regex', $singularity, 'vgt', 3600 );
+            }
         }
     }
 }

@@ -19,24 +19,18 @@ final class Morpheus_Tracer {
     private function build_path_cache(): void {
         if ( ! function_exists( 'wp_normalize_path' ) ) return;
 
-        $raw_plugin_dir = defined( 'WP_PLUGIN_DIR' )
-            ? WP_PLUGIN_DIR
-            : ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR . '/plugins' : ( defined( 'ABSPATH' ) ? ABSPATH . 'wp-content/plugins' : '' ) );
-        $plugin_dir = wp_normalize_path( (string) $raw_plugin_dir );
+        $plugin_dir = wp_normalize_path( WP_PLUGIN_DIR );
         $this->cached_plugin_dir = strtolower( wp_normalize_path( realpath( $plugin_dir ) ?: $plugin_dir ) );
 
         if ( defined( 'WPMU_PLUGIN_DIR' ) ) {
-            $wpmu_dir = wp_normalize_path( (string) WPMU_PLUGIN_DIR );
-            $this->cached_wpmu_dir = strtolower( wp_normalize_path( realpath( $wpmu_dir ) ?: $wpmu_dir ) );
-        } elseif ( defined( 'WP_CONTENT_DIR' ) ) {
-            $wpmu_dir = wp_normalize_path( WP_CONTENT_DIR . '/mu-plugins' );
+            $wpmu_dir = wp_normalize_path( WPMU_PLUGIN_DIR );
             $this->cached_wpmu_dir = strtolower( wp_normalize_path( realpath( $wpmu_dir ) ?: $wpmu_dir ) );
         }
 
         $theme_dir = function_exists('get_theme_root') ? wp_normalize_path(get_theme_root()) : (defined('WP_CONTENT_DIR') ? wp_normalize_path(WP_CONTENT_DIR . '/themes') : '');
         $this->cached_theme_dir = strtolower( wp_normalize_path( realpath( $theme_dir ) ?: $theme_dir ) );
 
-        $plugins = (function_exists( 'wp_cache_get' ) && function_exists( 'get_option' )) ? (array) get_option( 'active_plugins', [] ) : [];
+        $plugins = (array) get_option( 'active_plugins', [] );
 
         foreach ( $plugins as $plugin_file ) {
             $slug = dirname( (string) $plugin_file );
@@ -61,8 +55,28 @@ final class Morpheus_Tracer {
         }
     }
 
+    private static function is_self_file( string $file ): bool {
+        $file = strtolower( str_replace( '\\', '/', $file ) );
+        foreach ( array(
+            '/mu-plugins/visiongaia-integrity/',
+            '/plugins/gedefense-wp-core/',
+            '/plugins/gedefense/',
+            '/plugins/geDefense/',
+            '/vgt-vault/',
+            'vision-integrity-sentinel.php',
+            'vgt-omega-kernel.php',
+            'vgt-scanner-omega.php',
+        ) as $marker ) {
+            if ( str_contains( $file, strtolower( $marker ) ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function identify_caller(): string {
-        $stack = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 30 ); 
+        // Tieferer Stack & Single-File-Plugins auflösen (FIND-013).
+        $stack = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 80 ); 
         
         // Den Pfad des Sentinel Plugins selbst ermitteln, um es zu ignorieren
         $vis_path = defined('VIS_PATH') ? strtolower( wp_normalize_path( VIS_PATH ) ) : '';
@@ -76,6 +90,9 @@ final class Morpheus_Tracer {
 
             // 1. Eigene Ausführung ignorieren (VGT Sentinel / Morpheus selbst)
             if ( ! empty( $vis_path ) && str_starts_with( $file, $vis_path ) ) {
+                continue;
+            }
+            if ( self::is_self_file( $file ) ) {
                 continue;
             }
             if ( str_contains( $file, 'vgt-sentinel-bridge.php' ) ) {
@@ -99,8 +116,8 @@ final class Morpheus_Tracer {
                 
                 $relative = trim( str_replace( $this->cached_plugin_dir, '', $file ), '/' );
                 $folder = explode( '/', $relative )[0];
-                if ( ! empty( $folder ) && ! str_ends_with( $folder, '.php' ) ) {
-                    return $folder;
+                if ( ! empty( $folder ) ) {
+                    return str_ends_with( $folder, '.php' ) ? basename( $folder, '.php' ) : $folder;
                 }
             }
 

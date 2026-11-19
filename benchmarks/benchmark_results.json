@@ -7,14 +7,14 @@
         "openssl": "OpenSSL 3.5.7 9 Jun 2026"
     },
     "password_hashing": {
-        "argon2id_hash_median_ms": 268.814,
-        "argon2id_hash_p95_ms": 316.841,
-        "argon2id_verify_median_ms": 268.211,
-        "argon2id_verify_p95_ms": 324.916,
-        "bcrypt_hash_median_ms": 52.977,
-        "bcrypt_hash_p95_ms": 55.922,
-        "bcrypt_verify_median_ms": 52.982,
-        "bcrypt_verify_p95_ms": 59.402
+        "argon2id_hash_median_ms": 225.036,
+        "argon2id_hash_p95_ms": 229.373,
+        "argon2id_verify_median_ms": 224.225,
+        "argon2id_verify_p95_ms": 229.252,
+        "bcrypt_hash_median_ms": 52.646,
+        "bcrypt_hash_p95_ms": 53.306,
+        "bcrypt_verify_median_ms": 52.666,
+        "bcrypt_verify_p95_ms": 53.702
     },
     "aead_cryptography": {
         "encrypt_median_ms": 0.004,
@@ -28,12 +28,12 @@
         "methodology": "Pure in-memory PHP hashmap key existence check (1,000 entries). Excludes socket and SAPI teardown."
     },
     "aegis_dpi_inspection": {
-        "median_ms": 0.082,
-        "p95_ms": 0.14,
+        "median_ms": 0.119,
+        "p95_ms": 0.125,
         "methodology": "Full VIS_Aegis DPI inspection pipeline (normalization + atomic pattern evaluation + heuristics)."
     },
     "bootstrap": {
-        "median_ms": 0.004,
+        "median_ms": 0.003,
         "p95_ms": 0.004
     }
 }

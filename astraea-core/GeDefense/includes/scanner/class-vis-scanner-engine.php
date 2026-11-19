@@ -166,7 +166,7 @@ final class VIS_Scanner_Engine_Omega {
                     'file' => substr($normalizedDirectory, strlen($this->siteRoot)),
                     'verdict' => ['risk' => 20, 'confidence' => 100, 'truncated' => false, 'findings' => [[
                         'code' => 'DIRECTORY_UNREADABLE', 'risk' => 85, 'confidence' => 100,
-                        'message' => 'Directory could not be read; a complete integrity baseline cannot be proven.', 'quarantine_eligible' => false, 'classification' => VIS_Scan_Finding::CLASS_SUSPICIOUS,
+                        'message' => 'Directory could not be read; a complete integrity baseline cannot be proven.', 'quarantine_eligible' => false,
                     ]]],
                 ]);
             }
@@ -257,7 +257,6 @@ final class VIS_Scanner_Engine_Omega {
                 'confidence' => 100,
                 'message' => 'Indexed file became unavailable before content verification.',
                 'quarantine_eligible' => false,
-                'classification' => VIS_Scan_Finding::CLASS_SUSPICIOUS,
             ];
             $this->appendFindingRecord([
                 'file' => $relative,
@@ -288,7 +287,6 @@ final class VIS_Scanner_Engine_Omega {
                         'confidence' => 100,
                         'message' => 'Cryptographically authenticated deception node.',
                         'quarantine_eligible' => false,
-                        'classification' => VIS_Scan_Finding::CLASS_INFO,
                     ]],
                 ],
             ]);
@@ -347,7 +345,7 @@ final class VIS_Scanner_Engine_Omega {
         $blockingMalware = false;
         foreach ($findingRecords as $record) {
             $verdict = is_array($record['verdict'] ?? null) ? $record['verdict'] : [];
-            if ($this->serializedVerdictBlocks($verdict)) {
+            if ((int)($verdict['risk'] ?? 0) >= 80 && (int)($verdict['confidence'] ?? 0) >= 75) {
                 $blockingMalware = true;
                 break;
             }
@@ -487,28 +485,20 @@ final class VIS_Scanner_Engine_Omega {
 
             $validFindings = [];
             foreach ($findings as $finding) {
-                if (!is_array($finding)) continue;
-                $classification = $this->findingClassification($finding);
-                if ($classification === VIS_Scan_Finding::CLASS_INFO) continue;
-                if ((int)($finding['risk'] ?? 0) < 30) continue;
-                $finding['classification'] = $classification;
-                $validFindings[] = $finding;
+                if (is_array($finding) && (int)($finding['risk'] ?? 0) >= 50) {
+                    $validFindings[] = $finding;
+                }
             }
             if ($validFindings === []) continue;
 
             $maxRisk = 0;
             $maxConf = 0;
             $codes = [];
-            $strongestClass = VIS_Scan_Finding::CLASS_SUSPICIOUS;
             foreach ($validFindings as $f) {
-                $code = (string)($f['code'] ?? 'SCAN_FINDING');
+                $code = (string)($f['code'] ?? 'MALWARE_FINDING');
                 $codes[$code] = ($codes[$code] ?? 0) + 1;
                 $maxRisk = max($maxRisk, (int)($f['risk'] ?? 0));
                 $maxConf = max($maxConf, (int)($f['confidence'] ?? 0));
-                $candidateClass = (string)($f['classification'] ?? VIS_Scan_Finding::CLASS_SUSPICIOUS);
-                if ($this->classificationRank($candidateClass) > $this->classificationRank($strongestClass)) {
-                    $strongestClass = $candidateClass;
-                }
             }
 
             $descParts = [];
@@ -516,13 +506,7 @@ final class VIS_Scanner_Engine_Omega {
                 $descParts[] = $cnt > 1 ? "{$code} ({$cnt}x)" : $code;
             }
             $desc = implode(', ', $descParts);
-            $type = isset($record['quarantine'])
-                ? 'QUARANTINED'
-                : match ($strongestClass) {
-                    VIS_Scan_Finding::CLASS_MALWARE => 'MALWARE',
-                    VIS_Scan_Finding::CLASS_POLICY => 'POLICY',
-                    default => 'SUSPICIOUS',
-                };
+            $type = isset($record['quarantine']) ? 'QUARANTINED' : 'MALWARE';
 
             if (!isset($changesByFile[$file])) {
                 $changesByFile[$file] = [
@@ -531,65 +515,15 @@ final class VIS_Scanner_Engine_Omega {
                     'desc' => $desc,
                     'risk' => $maxRisk,
                     'confidence' => $maxConf,
-                    'classification' => $strongestClass,
                 ];
             } else {
-                $existingType = (string)($changesByFile[$file]['type'] ?? 'SUSPICIOUS');
-                if ($type === 'QUARANTINED'
-                    || ($type === 'MALWARE' && $existingType !== 'QUARANTINED')
-                    || ($type === 'POLICY' && !in_array($existingType, ['QUARANTINED', 'MALWARE'], true))) {
-                    $changesByFile[$file]['type'] = $type;
-                }
+                if ($type === 'QUARANTINED') $changesByFile[$file]['type'] = 'QUARANTINED';
                 $changesByFile[$file]['risk'] = max((int)$changesByFile[$file]['risk'], $maxRisk);
                 $changesByFile[$file]['confidence'] = max((int)$changesByFile[$file]['confidence'], $maxConf);
                 $changesByFile[$file]['desc'] .= '; ' . $desc;
-                if ($this->classificationRank($strongestClass) > $this->classificationRank((string)($changesByFile[$file]['classification'] ?? VIS_Scan_Finding::CLASS_SUSPICIOUS))) {
-                    $changesByFile[$file]['classification'] = $strongestClass;
-                }
             }
         }
         return array_values($changesByFile);
-    }
-
-    /** @param array<string, mixed> $verdict */
-    private function serializedVerdictBlocks(array $verdict): bool {
-        if (array_key_exists('blocking', $verdict)) return (bool)$verdict['blocking'];
-        $findings = is_array($verdict['findings'] ?? null) ? $verdict['findings'] : [];
-        foreach ($findings as $finding) {
-            if (!is_array($finding)) continue;
-            if ($this->findingClassification($finding) !== VIS_Scan_Finding::CLASS_MALWARE) continue;
-            if ((int)($finding['risk'] ?? 0) >= 80 && (int)($finding['confidence'] ?? 0) >= 75) return true;
-        }
-        return false;
-    }
-
-    /** @param array<string, mixed> $finding */
-    private function findingClassification(array $finding): string {
-        $classification = strtoupper((string)($finding['classification'] ?? ''));
-        if (in_array($classification, [
-            VIS_Scan_Finding::CLASS_MALWARE,
-            VIS_Scan_Finding::CLASS_SUSPICIOUS,
-            VIS_Scan_Finding::CLASS_POLICY,
-            VIS_Scan_Finding::CLASS_INFO,
-        ], true)) return $classification;
-
-        // Backward-compatible interpretation for persisted pre-0.6 scanner state.
-        if (!empty($finding['quarantine_eligible'])
-            && (int)($finding['risk'] ?? 0) >= 95
-            && (int)($finding['confidence'] ?? 0) >= 90) {
-            return VIS_Scan_Finding::CLASS_MALWARE;
-        }
-        return VIS_Scan_Finding::CLASS_SUSPICIOUS;
-    }
-
-    private function classificationRank(string $classification): int {
-        return match ($classification) {
-            VIS_Scan_Finding::CLASS_MALWARE => 4,
-            VIS_Scan_Finding::CLASS_POLICY => 3,
-            VIS_Scan_Finding::CLASS_SUSPICIOUS => 2,
-            VIS_Scan_Finding::CLASS_INFO => 1,
-            default => 0,
-        };
     }
 
     /** @param array<string, mixed> $old @param array<string, mixed> $new */
@@ -739,10 +673,10 @@ final class VIS_Scanner_Engine_Omega {
 
     /** @return array<string, mixed> */
     private function loadJson(string $file): array {
-        if (!is_file($file)) return [];
+        if (!is_file($file) || !is_readable($file)) return [];
         $size = filesize($file);
         if ($size === false || $size > self::MAX_STATE_BYTES) throw new StorageException('Scanner JSON size boundary exceeded.');
-        $content = file_get_contents($file);
+        $content = @file_get_contents($file);
         if (!is_string($content) || $content === '') return [];
         try {
             $data = json_decode($content, true, 64, JSON_THROW_ON_ERROR);

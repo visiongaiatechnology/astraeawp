@@ -1,7 +1,7 @@
 # AstraeaOS WP — Legacy Audit & Surface Modernization
 
-**Distribution:** AstraeaOS WP `0.1.0-alpha`  
-**Base:** WordPress Core 7.1 de_DE  
+**Distribution:** AstraeaOS WP `0.8.0`  
+**Base:** WordPress Core 7.1.5 de_DE  
 **Architectural Objective:** A hardened, lightweight, and modern distribution stripping decades of obsolete baggage while preserving ecosystem compatibility.
 
 ---

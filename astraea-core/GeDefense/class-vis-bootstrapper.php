@@ -19,27 +19,47 @@ final class VIS_Bootstrapper {
         \VisionGaia\GeDefense\Core\NamespaceCompatibility::register();
     }
 
+    /**
+     * Fail-closed kernel halt.
+     *
+     * Security stays fail-closed, but the response is opaque: module names,
+     * file paths and failure reasons are written to the error log only. The
+     * end user receives a correlation ID so support can find the incident
+     * without the page leaking internal architecture. Operators can opt into
+     * degraded operation with the VIS_DISABLE_FAIL_CLOSE constant.
+     */
     private static function trigger_fail_close(string $module, string $reason = ''): void {
-        http_response_code(503);
-        header('Status: 503 Service Temporarily Unavailable');
-        header('Retry-After: 300');
-        die("<h1>VGT SYSTEM HALT</h1><p>INTEGRITY COMPROMISED. Critical module [{$module}] failed to load. Fail-Close sequence initiated to protect host environment. " . ($reason ? "($reason)" : "") . "</p>");
+        $incident = substr(hash('sha256', $module . '|' . $reason . '|' . (string)microtime(true)), 0, 12);
+        error_log("[VGT BOOTSTRAPPER CRITICAL] Fail-Close [{$incident}] module={$module} reason=" . ($reason ?: 'Unknown'));
+
+        if (defined('VIS_DISABLE_FAIL_CLOSE') && VIS_DISABLE_FAIL_CLOSE === true) {
+            error_log("[VGT BOOTSTRAPPER] VIS_DISABLE_FAIL_CLOSE active, continuing in degraded mode [{$incident}].");
+            return;
+        }
+
+        if (!headers_sent()) {
+            http_response_code(503);
+            header('Status: 503 Service Temporarily Unavailable');
+            header('Retry-After: 300');
+            header('X-VGT-Incident: ' . $incident);
+            header('Content-Type: text/html; charset=utf-8');
+        }
+
+        echo '<h1>Service temporarily unavailable</h1>'
+            . '<p>Security kernel integrity check failed. Reference: '
+            . htmlspecialchars($incident, ENT_QUOTES, 'UTF-8')
+            . '</p>';
+
+        exit;
     }
 
     public static function ensure_sovereign_temp_dir(): void {
         $base_dir = defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR . '/uploads' : '';
         if (empty($base_dir)) return;
 
-        $temp_dir = function_exists('wp_normalize_path')
-            ? wp_normalize_path($base_dir . '/vgt-temp')
-            : str_replace('\\', '/', $base_dir . '/vgt-temp');
-
+        $temp_dir = wp_normalize_path($base_dir . '/vgt-temp');
         if (!is_dir($temp_dir)) {
-            if (function_exists('wp_mkdir_p')) {
-                @wp_mkdir_p($temp_dir);
-            } else {
-                @mkdir($temp_dir, 0755, true);
-            }
+            @wp_mkdir_p($temp_dir);
             if (is_dir($temp_dir)) {
                 $ht = $temp_dir . '/.htaccess';
                 if (!file_exists($ht)) {
@@ -59,45 +79,36 @@ final class VIS_Bootstrapper {
             @ini_set('upload_tmp_dir', $temp_dir);
             @ini_set('sys_temp_dir', $temp_dir);
 
-            if (function_exists('add_filter')) {
-                add_filter('temp_dir', static function(string $dir) use ($temp_dir): string {
-                    if (!is_dir($dir) || !is_writable($dir)) {
-                        return rtrim($temp_dir, '/') . '/';
-                    }
-                    return $dir;
-                }, 1, 1);
-            }
+            add_filter('temp_dir', static function(string $dir) use ($temp_dir): string {
+                if (!is_dir($dir) || !is_writable($dir)) {
+                    return rtrim($temp_dir, '/') . '/';
+                }
+                return $dir;
+            }, 1, 1);
         }
-    }
-
-    public static function is_installing(): bool {
-        if (defined('WP_INSTALLING') && WP_INSTALLING) {
-            return true;
-        }
-        if (defined('WP_SETUP_CONFIG') && WP_SETUP_CONFIG) {
-            return true;
-        }
-        if (function_exists('wp_installing') && wp_installing()) {
-            return true;
-        }
-        if (!defined('AUTH_SALT') || strlen((string)AUTH_SALT) < 32) {
-            return true;
-        }
-        global $wpdb;
-        if (!isset($wpdb) || !($wpdb instanceof \wpdb) || empty($wpdb->dbh)) {
-            return true;
-        }
-        if (function_exists('wp_cache_get') && function_exists('is_blog_installed') && !is_blog_installed()) {
-            return true;
-        }
-        return false;
     }
 
     public static function engage_phase_1(array $config): void {
         self::ensure_sovereign_temp_dir();
 
-        if (self::is_installing()) {
-            return;
+        // Reconcile any expired 12-hour ThroneGuard Master IP whitelist leases before security modules boot
+        if (!class_exists('VIS_Throne_Guard')) {
+            $tg_file = VIS_PATH . 'includes/modules/throneguard/class-vis-throne-guard.php';
+            if (is_readable($tg_file)) {
+                require_once $tg_file;
+            }
+        }
+        if (class_exists('VIS_Throne_Guard') && method_exists('VIS_Throne_Guard', 'reconcile_ip_leases')) {
+            try {
+                if (\VIS_Throne_Guard::reconcile_ip_leases()) {
+                    $fresh_config = get_option('vis_config', []);
+                    if (is_array($fresh_config)) {
+                        $config = $fresh_config;
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('[VGT BOOTSTRAPPER] ThroneGuard lease reconciliation warning: ' . $e->getMessage());
+            }
         }
 
         $xdr = '\\VisionGaia\\GeDefense\\Xdr\\EventFabric';
@@ -122,7 +133,8 @@ final class VIS_Bootstrapper {
             try {
                 VIS_Cerberus::instance();
             } catch (\Throwable $e) {
-                self::trigger_fail_close('CERBERUS_KERNEL', 'Perimeter guard panic: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[VGT BOOTSTRAPPER CRITICAL] CERBERUS_KERNEL panic: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                self::trigger_fail_close('CERBERUS_KERNEL', 'Perimeter guard panic: ' . $e->getMessage());
             }
         }
 
@@ -139,7 +151,8 @@ final class VIS_Bootstrapper {
                 $vis_aegis_engine = new VIS_Aegis($config);
                 define('VIS_AEGIS_ACTIVE', true);
             } catch (\Throwable $e) {
-                self::trigger_fail_close('AEGIS_KERNEL', 'Initialization panic: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                error_log('[VGT BOOTSTRAPPER CRITICAL] AEGIS_KERNEL panic: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                self::trigger_fail_close('AEGIS_KERNEL', 'Initialization panic: ' . $e->getMessage());
             }
         }
 
@@ -155,14 +168,9 @@ final class VIS_Bootstrapper {
         ];
 
         foreach ($core_modules as $mod_key => $mod_data) {
-            // During WordPress setup or installation before wp-config/DB exist, skip runtime modules requiring active tables/salts
-            if (self::is_installing() && in_array($mod_key, ['morpheus', 'gorgon', 'prometheus', 'nemesis'], true)) {
-                continue;
-            }
-
             $is_enabled = isset($config[$mod_key . '_enabled']) ? !empty($config[$mod_key . '_enabled']) : $mod_data['default'];
             $is_gorgon_ajax = $mod_key === 'gorgon'
-                && ((function_exists('wp_doing_ajax') && wp_doing_ajax()) || (defined('DOING_AJAX') && DOING_AJAX))
+                && wp_doing_ajax()
                 && isset($_REQUEST['action'])
                 && is_string($_REQUEST['action'])
                 && str_starts_with($_REQUEST['action'], 'vgt_gorgon_');
@@ -184,7 +192,10 @@ final class VIS_Bootstrapper {
                                 new $target_class();
                             }
                         } catch (\Throwable $e) {
-                            if ($mod_data['critical']) self::trigger_fail_close(strtoupper($mod_key), 'Subsystem panic: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                            if ($mod_data['critical']) {
+                                error_log('[VGT BOOTSTRAPPER CRITICAL] ' . strtoupper($mod_key) . ' panic: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                                self::trigger_fail_close(strtoupper($mod_key), 'Subsystem panic: ' . $e->getMessage());
+                            }
                         }
                     }
                 } elseif ($mod_data['critical']) {
@@ -196,11 +207,6 @@ final class VIS_Bootstrapper {
 
     public static function engage_phase_2(array $config): void {
         if (defined('VIS_BOOTSTRAP_COMPLETE')) return; 
-
-        if (self::is_installing()) {
-            define('VIS_BOOTSTRAP_COMPLETE', true);
-            return;
-        } 
         
         if (class_exists('VIS_Compatibility_Manager')) new VIS_Compatibility_Manager();
         if (class_exists('VIS_Titan')) new VIS_Titan($config);
@@ -212,6 +218,9 @@ final class VIS_Bootstrapper {
         if (class_exists('\VisionGaia\GeDefense\Modules\Styx\Styx')) {
             \VisionGaia\GeDefense\Modules\Styx\Styx::get_instance();
         }
+        if (class_exists('\VisionGaia\GeDefense\Modules\ThreatIntel\ThreatIntelligence')) {
+            \VisionGaia\GeDefense\Modules\ThreatIntel\ThreatIntelligence::instance();
+        }
         // ThroneGuard is a fixed core component: its activation and recovery
         // endpoints must remain reachable before enforcement is enabled.
         if (class_exists('VIS_Throne_Guard')) VIS_Throne_Guard::get_instance();
@@ -221,6 +230,16 @@ final class VIS_Bootstrapper {
         if (is_readable($vault_path)) {
             require_once $vault_path;
             if (class_exists('VIS_Key_Vault')) new VIS_Key_Vault();
+        }
+
+        // Linux bridge: dashboard tab only, encrypted DB secret,
+        // existing PHP logging path. No extra menu page and no WP file write.
+        $linux_bridge_file = VIS_PATH . 'includes/modules/throneguard/class-vis-linux-bridge.php';
+        if (is_readable($linux_bridge_file)) {
+            require_once $linux_bridge_file;
+            if (class_exists('VIS_Linux_Bridge')) {
+                VIS_Linux_Bridge::init();
+            }
         }
 
         if (class_exists('VIS_Integration_Bus')) VIS_Integration_Bus::mount();
@@ -247,7 +266,40 @@ final class VIS_Bootstrapper {
         if (is_admin() && class_exists('VIS_Dashboard_Core')) {
             new VIS_Dashboard_Core();
         }
-        
+
+        // Runtime Integrity Verification Gate (FIND-011): verify pinned component manifests periodically at runtime.
+        if (class_exists('VIS_Module_Integrity') && method_exists('VIS_Module_Integrity', 'verify_all')) {
+            $verifiedRecently = function_exists('get_transient') ? get_transient('vis_runtime_integrity_verified_v1') : false;
+            if ($verifiedRecently === false) {
+                try {
+                    $integrityResults = \VIS_Module_Integrity::verify_all();
+                    $tampered = [];
+                    foreach ($integrityResults as $compId => $compStatus) {
+                        if (($compStatus['status'] ?? '') !== 'VERIFIED') {
+                            $tampered[] = $compId . ':' . ($compStatus['status'] ?? 'UNKNOWN');
+                        }
+                    }
+                    if ($tampered !== []) {
+                        error_log('[VGT INTEGRITY ALERT] Runtime component verification mismatch: ' . implode(', ', $tampered));
+                        if (class_exists('\\VisionGaia\\GeDefense\\Xdr\\EventFabric')) {
+                            \VisionGaia\GeDefense\Xdr\EventFabric::ingest([
+                                'sensor' => 'INTEGRITY', 'category' => 'INTEGRITY',
+                                'event_type' => 'RUNTIME_COMPONENT_MISMATCH', 'role' => 'CONFIRMATION',
+                                'severity' => 9, 'confidence' => 100, 'score' => 95,
+                                'entity_type' => 'SYSTEM', 'entity_id' => 'module-integrity',
+                                'vector' => 'MANIFEST_TAMPER', 'action_type' => 'ALERT', 'outcome' => 'DETECTED',
+                                'metadata' => ['components' => implode(', ', array_slice($tampered, 0, 10))],
+                            ]);
+                        }
+                    } elseif (function_exists('set_transient')) {
+                        set_transient('vis_runtime_integrity_verified_v1', 1, 300);
+                    }
+                } catch (\Throwable $e) {
+                    error_log('[VGT INTEGRITY ALERT] Runtime check exception: ' . $e->getMessage());
+                }
+            }
+        }
+
         define('VIS_BOOTSTRAP_COMPLETE', true);
     }
 }

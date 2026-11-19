@@ -2,7 +2,7 @@
 
 > **Specification:** Astraea Core Boot Sequence  
 > **Status:** DIAMANT VGT SUPREME  
-> **Target:** AstraeaOS WP 0.3.0-alpha  
+> **Target:** AstraeaOS WP 0.8.0  
 > **Kernel Standard:** 2.1
 
 ---

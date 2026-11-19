@@ -9,50 +9,37 @@ if (!defined('ABSPATH')) exit('VGT_ACCESS_DENIED');
  * ARCHITECT: OMEGA PROTOCOL
  */
 final class VIS_Schema {
+    /**
+     * Numeric schema revision. Schema gating must not depend on the marketing
+     * version string (VIS_VERSION = "8.6.0 OPEN CORE"): a display change would
+     * otherwise trigger or suppress migrations.
+     */
+    public const SCHEMA_VERSION = '8.4.4.0';
     public const XDR_SCHEMA_VERSION = '3';
     public const DOWNLOAD_SCHEMA_VERSION = '1';
 
     public static function enforce(): void {
         global $wpdb;
-        if (!isset($wpdb) || !is_object($wpdb) || empty($wpdb->dbh)) {
-            return;
-        }
-
-        if (!defined('VIS_VERSION')) {
-            define('VIS_VERSION', '2.1.0-astraea');
-        }
-        if (!defined('VIS_TABLE_BANS')) {
-            define('VIS_TABLE_BANS', 'vis_apex_bans');
-        }
-        if (!defined('VIS_TABLE_LOGS')) {
-            define('VIS_TABLE_LOGS', 'vis_apex_logs');
-        }
-        if (!defined('VIS_VAULT_DIR')) {
-            if (defined('WP_CONTENT_DIR')) {
-                define('VIS_VAULT_DIR', WP_CONTENT_DIR . '/uploads/vis-vault-omega');
-            } else {
-                define('VIS_VAULT_DIR', dirname(__DIR__) . '/vault-storage');
-            }
-        }
-
-        $installed_ver = function_exists('get_option') ? get_option('vis_db_version') : false;
-        $xdr_ver = function_exists('get_option') ? get_option('vis_xdr_schema_version') : false;
-        $download_ver = function_exists('get_option') ? get_option('vis_download_schema_version') : false;
+        $installed_ver = get_option('vis_db_version');
+        $xdr_ver = get_option('vis_xdr_schema_version');
+        $download_ver = get_option('vis_download_schema_version');
         
         // Bail early if the database schema is already up-to-date
-        if ($installed_ver === VIS_VERSION
+        if ($installed_ver === self::SCHEMA_VERSION
             && $xdr_ver === self::XDR_SCHEMA_VERSION
             && $download_ver === self::DOWNLOAD_SCHEMA_VERSION) {
             return;
         }
 
+        // Include dbDelta context
+        if (!function_exists('dbDelta')) {
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        }
+
         // 1. VAULT DIRECTORY ENFORCEMENT
-        if (!is_dir(VIS_VAULT_DIR)) {
-            if (function_exists('wp_mkdir_p')) {
-                @wp_mkdir_p(VIS_VAULT_DIR);
-            } else {
-                @mkdir(VIS_VAULT_DIR, 0755, true);
-            }
+        // Stellt sicher, dass das Vault-Verzeichnis immer physisch und sicher existiert
+        if (!is_dir(VIS_VAULT_DIR) && !wp_mkdir_p(VIS_VAULT_DIR)) {
+            throw new RuntimeException('VGT vault storage unavailable.');
         }
 
         $vault_files = [
@@ -61,13 +48,15 @@ final class VIS_Schema {
             'web.config' => '<?xml version="1.0" encoding="UTF-8"?><configuration><system.webServer><authorization><deny users="*" /></authorization><directoryBrowse enabled="false" /></system.webServer></configuration>',
         ];
 
-        if (is_dir(VIS_VAULT_DIR) && is_writable(VIS_VAULT_DIR)) {
-            foreach ($vault_files as $name => $content) {
-                $path = VIS_VAULT_DIR . DIRECTORY_SEPARATOR . $name;
-                @file_put_contents($path, $content, LOCK_EX);
-                @chmod($path, 0600);
+        foreach ($vault_files as $name => $content) {
+            $path = VIS_VAULT_DIR . DIRECTORY_SEPARATOR . $name;
+            if (file_put_contents($path, $content, LOCK_EX) === false || !chmod($path, 0600)) {
+                throw new RuntimeException('VGT vault enforcement failed.');
             }
-            @chmod(VIS_VAULT_DIR, 0700);
+        }
+
+        if (!chmod(VIS_VAULT_DIR, 0700)) {
+            throw new RuntimeException('VGT vault permission enforcement failed.');
         }
 
         $charset_collate = $wpdb->get_charset_collate();
@@ -268,46 +257,26 @@ final class VIS_Schema {
             KEY attachment_id (attachment_id)
         ) $charset_collate;";
 
-        // 3. EXECUTE SCHEMA CREATION DIRECTLY (DEPENDENCY-FREE)
+        // 3. EXECUTE SCHEMA UPDATES
+        // Supress errors locally to avoid leaking schema data on edge cases
         $wpdb->suppress_errors();
-        $tables = [
-            $sql_oracle,
-            $sql_bans,
-            $sql_logs,
-            $sql_rate_limits,
-            $sql_xdr_events,
-            $sql_xdr_incidents,
-            $sql_xdr_links,
-            $sql_xdr_responses,
-            $sql_xdr_evidence,
-            $sql_downloads,
-        ];
-
-        foreach ($tables as $table_sql) {
-            $create_if_not_exists = preg_replace('/^CREATE TABLE\s+/i', 'CREATE TABLE IF NOT EXISTS ', trim($table_sql));
-            $wpdb->query($create_if_not_exists);
-        }
-
-        // Optional dbDelta if available or in admin context
-        if (!function_exists('dbDelta') && function_exists('is_admin') && is_admin() && defined('ABSPATH') && file_exists(ABSPATH . 'wp-admin/includes/upgrade.php')) {
-            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        }
-        if (function_exists('dbDelta')) {
-            foreach ($tables as $table_sql) {
-                dbDelta($table_sql);
-            }
-        }
+        dbDelta($sql_oracle);
+        dbDelta($sql_bans);
+        dbDelta($sql_logs);
+        dbDelta($sql_rate_limits);
+        dbDelta($sql_xdr_events);
+        dbDelta($sql_xdr_incidents);
+        dbDelta($sql_xdr_links);
+        dbDelta($sql_xdr_responses);
+        dbDelta($sql_xdr_evidence);
+        dbDelta($sql_downloads);
         $wpdb->show_errors();
         
         // 4. FINALIZE UPDATE
-        if (function_exists('update_option')) {
-            update_option('vis_db_version', VIS_VERSION);
-            update_option('vis_xdr_schema_version', self::XDR_SCHEMA_VERSION, false);
-            update_option('vis_download_schema_version', self::DOWNLOAD_SCHEMA_VERSION, false);
-            update_option('vgt_oracle_table_ready', true);
-        }
-        if (function_exists('flush_rewrite_rules')) {
-            flush_rewrite_rules();
-        }
+        update_option('vis_db_version', self::SCHEMA_VERSION);
+        update_option('vis_xdr_schema_version', self::XDR_SCHEMA_VERSION, false);
+        update_option('vis_download_schema_version', self::DOWNLOAD_SCHEMA_VERSION, false);
+        update_option('vgt_oracle_table_ready', true); // VGT KERNEL FIX: State-Synchronisation für das Oracle
+        flush_rewrite_rules();
     }
 }

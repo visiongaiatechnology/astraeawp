@@ -62,7 +62,7 @@ if ($api_key !== '' && class_exists('VIS_Vault')) {
                 </div>
                 <div class="vgt-field-wrap">
                     <label><?php esc_html_e('Neural Access Key', 'vgt-sentinel'); ?></label>
-                    <input type="password" id="vgt-nexus-key" name="vis_config[gorgon_api_key]" value="<?php echo esc_attr($api_key); ?>" class="vgt-field-input" placeholder="vgt-nx-...">
+                    <input type="password" id="vgt-nexus-key" name="vis_config[gorgon_api_key]" value="" class="vgt-field-input" autocomplete="new-password" placeholder="<?php echo esc_attr(!empty($api_key) ? '•••••••••••••••••••••••• (Stored Encrypted)' : 'vgt-nx-...'); ?>">
                 </div>
             </div>
             
@@ -163,7 +163,7 @@ if ($api_key !== '' && class_exists('VIS_Vault')) {
             </div>
         <?php endforeach; ?>
 
-        <!-- ADD TELEMETRY NODE ACTION -->
+        <!-- ADD NODE PLACEHOLDER -->
         <div class="vgt-add-placeholder" id="btn-integrate-node">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 5px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
             <span style="font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;"><?php esc_html_e('Inject Telemetry Source', 'vgt-sentinel'); ?></span>

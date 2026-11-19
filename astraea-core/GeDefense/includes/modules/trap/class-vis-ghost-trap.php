@@ -17,12 +17,7 @@ final class VIS_Ghost_Trap {
         $pluginFile = is_file(VIS_PATH . 'gedefense-wp.php')
             ? VIS_PATH . 'gedefense-wp.php'
             : VIS_PATH . 'vision-integrity-sentinel.php';
-        if (function_exists('register_deactivation_hook')) {
-            if (!isset($GLOBALS['wp_plugin_paths']) || !is_array($GLOBALS['wp_plugin_paths'])) {
-                $GLOBALS['wp_plugin_paths'] = [];
-            }
-            register_deactivation_hook($pluginFile, [$this->engine, 'destroy_all_traps']);
-        }
+        register_deactivation_hook($pluginFile, [$this->engine, 'destroy_all_traps']);
         $this->migrate_legacy_traps();
     }
 

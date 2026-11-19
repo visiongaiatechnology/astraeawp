@@ -1,6 +1,6 @@
 # AstraeaOS WP Secure Genesis
 
-**Distribution:** AstraeaOS WP `0.6.0-alpha`  
+**Distribution:** AstraeaOS WP `0.8.0`  
 **Status:** alpha engineering implementation; not an external security certification.
 
 ## Purpose

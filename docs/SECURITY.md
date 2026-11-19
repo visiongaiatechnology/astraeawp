@@ -1,6 +1,6 @@
 # AstraeaOS WP — Security Architecture & Hardening Defaults
 
-**Distribution:** AstraeaOS WP `0.6.0-alpha`  
+**Distribution:** AstraeaOS WP `0.8.0`  
 **Security Posture:** Security-by-Default, Zero-Trust Ingress, Defense-in-Depth  
 
 ---

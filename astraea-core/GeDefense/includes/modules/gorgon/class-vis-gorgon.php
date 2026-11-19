@@ -21,7 +21,6 @@ final class Gorgon {
         require_once $dir . 'class-gorgon-config.php';
         require_once $dir . 'class-gorgon-harvester.php';
         require_once $dir . 'class-gorgon-uplink.php';
-        require_once $dir . 'class-gorgon-pattern-dsl.php';
         require_once $dir . 'class-gorgon-sync-engine.php';
         
         // VGT SUPREME: Lade den AJAX Controller

@@ -63,7 +63,7 @@ function buildCoreManifest(string $rootDir, string $version): array
 {
     $coreDir = $rootDir . '/astraea-core';
     $files = [];
-    foreach (scanFiles($coreDir, static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json') as $rel => $abs) {
+    foreach (scanFiles($coreDir, static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json' || str_starts_with($rel, '/.git/')) as $rel => $abs) {
         $files[ltrim($rel, '/')] = hash_file('sha256', $abs);
     }
     ksort($files, SORT_STRING);
@@ -86,7 +86,7 @@ function buildRootManifest(string $rootDir, string $version): array
 {
     $files = [];
     $ctx = hash_init('sha256');
-    foreach (scanFiles($rootDir, static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json' || str_starts_with($rel, '/dist/')) as $rel => $abs) {
+    foreach (scanFiles($rootDir, static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json' || str_starts_with($rel, '/.git/') || str_starts_with($rel, '/dist/')) as $rel => $abs) {
         $hash = hash_file('sha256', $abs);
         $size = filesize($abs);
         $files[ltrim($rel, '/')] = ['sha256' => $hash, 'size_bytes' => is_int($size) ? $size : 0];
@@ -211,7 +211,7 @@ function verifyCoreManifest(string $rootDir): bool
     $path = $rootDir . '/astraea-core/BUILD-MANIFEST.json';
     $manifest = readJson($path);
     if (!isset($manifest['files']) || !is_array($manifest['files'])) { return false; }
-    $actual = scanFiles($rootDir . '/astraea-core', static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json');
+    $actual = scanFiles($rootDir . '/astraea-core', static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json' || str_starts_with($rel, '/.git/'));
     $expectedPaths = array_keys($manifest['files']);
     $actualPaths = array_map(static fn(string $rel): string => ltrim($rel, '/'), array_keys($actual));
     sort($expectedPaths, SORT_STRING); sort($actualPaths, SORT_STRING);
@@ -232,7 +232,7 @@ function verifyRootManifest(string $rootDir): bool
     $path = $rootDir . '/BUILD-MANIFEST.json';
     $manifest = readJson($path);
     if (!isset($manifest['files']) || !is_array($manifest['files'])) { return false; }
-    $actual = scanFiles($rootDir, static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json' || str_starts_with($rel, '/dist/'));
+    $actual = scanFiles($rootDir, static fn(string $rel): bool => $rel === '/BUILD-MANIFEST.json' || str_starts_with($rel, '/.git/') || str_starts_with($rel, '/dist/'));
     $expectedPaths = array_keys($manifest['files']);
     $actualPaths = array_map(static fn(string $rel): string => ltrim($rel, '/'), array_keys($actual));
     sort($expectedPaths, SORT_STRING); sort($actualPaths, SORT_STRING);

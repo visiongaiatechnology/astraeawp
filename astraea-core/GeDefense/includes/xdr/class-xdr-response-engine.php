@@ -10,15 +10,9 @@ final class ResponseEngine {
     public const DEFAULT_TTL = 900; // 15 minutes hard semantic TTL
 
     public static function boot(): void {
-        if (function_exists('add_action')) {
-            add_action('vis_xdr_response_cleanup', [self::class, 'rollbackExpired']);
-            add_action('init', static function (): void {
-                if (function_exists('wp_next_scheduled') && function_exists('wp_schedule_event')) {
-                    if (!\wp_next_scheduled('vis_xdr_response_cleanup')) {
-                        \wp_schedule_event(time() + 300, 'hourly', 'vis_xdr_response_cleanup');
-                    }
-                }
-            });
+        add_action('vis_xdr_response_cleanup', [self::class, 'rollbackExpired']);
+        if (!wp_next_scheduled('vis_xdr_response_cleanup')) {
+            wp_schedule_event(time() + 300, 'hourly', 'vis_xdr_response_cleanup');
         }
     }
 
@@ -87,7 +81,7 @@ final class ResponseEngine {
         $auto = is_array($config) && !empty($config['auto_response_enabled']);
 
         if (!$auto || !$decision['containment_allowed']) {
-            $wpdb->update($incidents, ['response_state' => $decision['tier']], ['incident_uuid' => $incidentId]);
+            self::update_incident_with_retry($wpdb, $incidents, ['response_state' => $decision['tier']], $incidentId);
             return;
         }
 
@@ -101,7 +95,7 @@ final class ResponseEngine {
         if ($escalationEnabled && $actor !== '') {
             $twentyFourHoursAgo = gmdate('Y-m-d H:i:s', time() - 86400);
             $priorCount = (int)$wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$incidents} WHERE primary_actor = %s AND incident_uuid != %s AND started_at >= %s",
+                "SELECT COUNT(*) FROM {$incidents} WHERE primary_actor = %s AND incident_uuid != %s AND created_at >= %s",
                 $actor, $incidentId, $twentyFourHoursAgo
             ));
             if ($priorCount >= 1) {
@@ -122,7 +116,10 @@ final class ResponseEngine {
             }
             if ($targetRoute === '' && !empty($node['route']) && is_string($node['route']) && str_starts_with($node['route'], '/')) {
                 $r = (string)parse_url($node['route'], PHP_URL_PATH);
-                if (strlen($r) > 1) {
+                $rNorm = rtrim(strtolower($r), '/') ?: '/';
+                if (strlen($r) > 1
+                    && !in_array($rNorm, ['/', '/wp-login.php', '/wp-admin', '/wp-cron.php', '/wp-json', '/index.php'], true)
+                    && !str_starts_with($rNorm, '/wp-admin/')) {
                     $targetRoute = $r;
                 }
             }
@@ -381,10 +378,20 @@ final class ResponseEngine {
             }
         }
 
-        $wpdb->update($incidents, ['response_state' => $finalState], ['incident_uuid' => $incidentId]);
+        self::update_incident_with_retry($wpdb, $incidents, ['response_state' => $finalState], $incidentId);
         if ($actionsApplied > 0 && function_exists('wp_schedule_single_event')) {
             wp_schedule_single_event(time() + min($ttls), 'vis_xdr_response_cleanup');
         }
+    }
+
+    private static function update_incident_with_retry(\wpdb $wpdb, string $table, array $data, string $incidentId): bool {
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            $result = $wpdb->update($table, $data, ['incident_uuid' => $incidentId]);
+            if ($result !== false) return true;
+            if (!str_contains(strtolower((string)($wpdb->last_error ?? '')), 'deadlock')) return false;
+            usleep(50000 * $attempt);
+        }
+        return false;
     }
 
     public static function rollbackExpired(): void {

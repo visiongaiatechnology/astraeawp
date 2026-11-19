@@ -2,7 +2,7 @@
 
 <!-- STATUS: DIAMANT VGT SUPREME -->
 
-AstraeaOS WP is an independent, hardened WordPress distribution with its own first-party kernel, built on top of the **WordPress 7.1** upstream base.
+AstraeaOS WP is an independent, hardened WordPress distribution with its own first-party kernel, built on top of the **WordPress 7.1.5** upstream base.
 
 The overarching design directive is **"WordPress without the Plugin Stack."** Astraea delivers universal infrastructure tasks directly as first-party kernel modules, reducing the typical plugin footprint from 15–25 third-party plugins down to 0 for core tasks, while preserving complete compatibility for specialized business applications.
 

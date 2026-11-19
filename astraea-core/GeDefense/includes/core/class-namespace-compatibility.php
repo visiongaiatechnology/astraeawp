@@ -27,6 +27,7 @@ final class NamespaceCompatibility {
         'VisionGaia\\GeDefense\\Core\\SecurityHealth' => ['includes/core/class-vis-security-health.php', ['VIS_Security_Health']],
         'VisionGaia\\GeDefense\\Core\\SecurityCenter' => ['includes/core/class-vis-security-center.php', ['VIS_Security_Center']],
         'VisionGaia\\GeDefense\\Core\\I18n' => ['includes/core/class-vis-i18n.php', ['VIS_I18n']],
+        'VisionGaia\\GeDefense\\Core\\GeoResolver' => ['includes/core/class-vis-geo-resolver.php', ['VIS_Geo_Resolver']],
         'VisionGaia\\GeDefense\\Compatibility\\Manager' => ['includes/compatibility/class-vis-compatibility-manager.php', ['VIS_Compatibility_Manager']],
         'VisionGaia\\GeDefense\\Dashboard\\Dashboard' => ['includes/dashboard/class-vis-dashboard-core.php', ['VIS_Dashboard_Core']],
         'VisionGaia\\GeDefense\\Dashboard\\View' => ['includes/dashboard/class-vis-dashboard-view.php', ['VIS_Dashboard_View']],
@@ -64,6 +65,7 @@ final class NamespaceCompatibility {
         'VisionGaia\\GeDefense\\Modules\\Prometheus\\Prometheus' => ['includes/modules/prometheus/class-vis-prometheus.php', ['VisionGaia\\Integrity\\Modules\\Prometheus\\VIS_Prometheus']],
         'VisionGaia\\GeDefense\\Modules\\Nemesis\\Nemesis' => ['includes/modules/nemesis/class-vis-nemesis.php', ['VisionGaia\\Integrity\\Modules\\Nemesis\\VIS_Nemesis']],
         'VisionGaia\\GeDefense\\Modules\\Styx\\Styx' => ['includes/modules/styx/class-vis-styx.php', ['VIS_Styx', 'VisionGaia\\Integrity\\Modules\\Styx\\VIS_Styx']],
+        'VisionGaia\\GeDefense\\Modules\\ThreatIntel\\ThreatIntelligence' => ['includes/modules/threat-intel/class-vis-threat-intel.php', ['VIS_Threat_Intelligence', 'VisionGaia\\Integrity\\Modules\\ThreatIntel\\VIS_Threat_Intelligence']],
         'VisionGaia\\GeDefense\\Modules\\Morpheus\\Morpheus' => ['includes/modules/morpheus/class-vis-morpheus.php', ['VGT\\Sentinel\\Modules\\Morpheus\\Vis_Morpheus']],
         'VisionGaia\\GeDefense\\Modules\\Gorgon\\Gorgon' => ['includes/modules/gorgon/class-vis-gorgon.php', ['VGT\\Sentinel\\Modules\\Gorgon\\Vis_Gorgon']],
     ];

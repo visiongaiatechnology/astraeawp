@@ -34,7 +34,7 @@ final class Morpheus {
     public Morpheus_Dashboard $dashboard;
 
     private function __construct() {
-        $config = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_config', [] ) : [];
+        $config = get_option( 'vis_config', [] );
         $this->enforcement_mode = ! empty( $config['morpheus_strict_mode'] );
 
         $this->matrix_file = Morpheus_Path_Jail::root_file('compiled-matrix.json');
@@ -83,38 +83,11 @@ final class Morpheus {
             die("VGT KERNEL PANIC: IO_READ_ERROR - compiled-matrix.json nicht lesbar.");
         }
         
-        $is_installing = class_exists('\\VIS_Bootstrapper')
-            ? \VIS_Bootstrapper::is_installing()
-            : ((defined('WP_INSTALLING') && WP_INSTALLING)
-                || (defined('WP_SETUP_CONFIG') && WP_SETUP_CONFIG)
-                || (function_exists('wp_installing') && wp_installing())
-                || !defined('AUTH_SALT')
-                || strlen((string)AUTH_SALT) < 32);
-
-        if ($is_installing || !function_exists('wp_cache_get') || !function_exists('get_option')) {
-            $this->permission_matrix = [
-                '_meta' => [
-                    'version' => '1.0',
-                    'last_updated' => gmdate('Y-m-d\TH:i:s\Z'),
-                    'strict_mode' => false,
-                ],
-                '_default' => [
-                    'network'  => [], 
-                    'db_write' => [], 
-                    'options'  => [],
-                ],
-            ];
-            $this->apply_matrix( $this->permission_matrix );
-            return;
-        }
-
         $expected_hash = get_option( 'vgt_matrix_hash' );
         if (!is_string($expected_hash) || strlen($expected_hash) !== 64) {
             if (defined('AUTH_SALT') && strlen((string)AUTH_SALT) >= 32) {
                 $expected_hash = hash_hmac('sha256', $json, (string)AUTH_SALT);
-                if (function_exists('update_option')) {
-                    update_option('vgt_matrix_hash', $expected_hash, false);
-                }
+                update_option('vgt_matrix_hash', $expected_hash, false);
             } else {
                 throw new \SecurityException('Matrix authentication token missing.');
             }
@@ -145,11 +118,9 @@ final class Morpheus {
         if (!self::validate_compiled_matrix($data)) {
             throw new \SecurityException('Matrix validation failed.');
         }
-        self::$is_internal_action = true;
+        self::$is_internal_action = true; 
         try {
-            $json = function_exists('\\wp_json_encode')
-                ? \wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
-                : json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+            $json = wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
             if ( $json === false ) {
                  throw new \RuntimeException( "JSON Encoding failed." );
             }
@@ -168,14 +139,11 @@ final class Morpheus {
             }
             @chmod($this->matrix_file, 0600);
             
-            if (defined('AUTH_SALT') && strlen((string)AUTH_SALT) >= 32 && function_exists('wp_cache_get') && function_exists('update_option')) {
-                $salt = (string)AUTH_SALT;
-                update_option( 'vgt_matrix_hash', hash_hmac( 'sha256', $json, $salt ) );
-            } elseif (!class_exists('\\VIS_Bootstrapper') || !\VIS_Bootstrapper::is_installing()) {
-                if (!defined('AUTH_SALT') || strlen((string)AUTH_SALT) < 32) {
-                    throw new \SecurityException('Matrix authentication token unavailable.');
-                }
+            if (!defined('AUTH_SALT') || strlen((string)AUTH_SALT) < 32) {
+                throw new \SecurityException('Matrix authentication token unavailable.');
             }
+            $salt = (string)AUTH_SALT;
+            update_option( 'vgt_matrix_hash', hash_hmac( 'sha256', $json, $salt ) );
             
             $this->permission_matrix = $data;
         } finally {
@@ -193,7 +161,7 @@ final class Morpheus {
 
     public function get_effective_matrix( string $plugin_slug ): array {
         $base = $this->get_base_plugin_matrix( $plugin_slug );
-        $overlays = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_morpheus_xdr_overlays', [] ) : [];
+        $overlays = get_option( 'vis_morpheus_xdr_overlays', [] );
         if ( ! is_array( $overlays ) || empty( $overlays ) ) {
             return $base;
         }
@@ -222,7 +190,7 @@ final class Morpheus {
     }
 
     public function add_xdr_overlay( string $incidentId, string $responseId, string $targetComponent, array $restrictions, int $ttl = 900 ): void {
-        $overlays = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_morpheus_xdr_overlays', [] ) : [];
+        $overlays = get_option( 'vis_morpheus_xdr_overlays', [] );
         if ( ! is_array( $overlays ) ) $overlays = [];
 
         $overlays[ $incidentId ] = [
@@ -234,19 +202,15 @@ final class Morpheus {
             'expires_at'       => gmdate( 'Y-m-d H:i:s', time() + $ttl ),
             'status'           => 'ACTIVE',
         ];
-        if (function_exists('update_option')) {
-            update_option( 'vis_morpheus_xdr_overlays', $overlays, false );
-        }
+        update_option( 'vis_morpheus_xdr_overlays', $overlays, false );
     }
 
     public function remove_xdr_overlay( string $incidentId, ?string $responseId = null ): void {
-        $overlays = (function_exists('wp_cache_get') && function_exists('get_option')) ? (array)get_option( 'vis_morpheus_xdr_overlays', [] ) : [];
+        $overlays = get_option( 'vis_morpheus_xdr_overlays', [] );
         if ( is_array( $overlays ) && isset( $overlays[ $incidentId ] ) ) {
             if ( $responseId === null || ($overlays[$incidentId]['response_id'] ?? '') === $responseId ) {
                 unset( $overlays[ $incidentId ] );
-                if (function_exists('update_option')) {
-                    update_option( 'vis_morpheus_xdr_overlays', $overlays, false );
-                }
+                update_option( 'vis_morpheus_xdr_overlays', $overlays, false );
             }
         }
     }

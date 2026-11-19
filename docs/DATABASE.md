@@ -1,6 +1,6 @@
 # AstraeaOS WP — Database Modernization & Schema Architecture
 
-**Distribution:** AstraeaOS WP `0.1.0-alpha`  
+**Distribution:** AstraeaOS WP `0.8.0`  
 **Storage Engines:** InnoDB exclusively  
 **Character Encoding:** `utf8mb4` with `utf8mb4_unicode_520_ci` or `utf8mb4_0900_ai_ci`  
 **Minimum Target:** MySQL >= 8.0 or MariaDB >= 10.11  

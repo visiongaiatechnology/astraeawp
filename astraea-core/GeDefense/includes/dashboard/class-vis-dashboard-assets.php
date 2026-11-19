@@ -6,9 +6,9 @@ if (!defined('ABSPATH')) exit('VGT_ACCESS_DENIED');
 final class VIS_Dashboard_Assets {
 
     public static function enqueue(): void {
-        $base_version = defined('VIS_VERSION') ? VIS_VERSION : 'omega';
-        $js_file = defined('VIS_PATH') ? VIS_PATH . 'assets/js/vis-scanner-client.js' : '';
-        $version = (file_exists($js_file)) ? $base_version . '.' . filemtime($js_file) : $base_version;
+        $base_version = defined('VIS_VERSION') ? VIS_VERSION : '8.6.0';
+        $modern_css = defined('VIS_PATH') ? VIS_PATH . 'assets/css/vis-dashboard-modern.css' : '';
+        $version = (file_exists($modern_css)) ? $base_version . '.' . filemtime($modern_css) : $base_version;
 
         $activePage = isset($_GET['page']) && is_string($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         $activeTab = isset($_GET['tab']) && is_string($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : '';
@@ -22,10 +22,13 @@ final class VIS_Dashboard_Assets {
 
         $viewStylePath = VIS_PATH . 'includes/dashboard/views/' . $activeTab . '/style.css';
         if (!in_array($activeTab, ['titan', 'loginpager'], true) && preg_match('/^[a-z0-9_]{1,32}$/D', $activeTab) === 1 && is_file($viewStylePath)) {
-            wp_enqueue_style('vis-dashboard-view-' . $activeTab, VIS_URL . 'includes/dashboard/views/' . $activeTab . '/style.css', ['vis-dashboard-css'], $version);
+            $tab_ver = $base_version . '.' . filemtime($viewStylePath);
+            wp_enqueue_style('vis-dashboard-view-' . $activeTab, VIS_URL . 'includes/dashboard/views/' . $activeTab . '/style.css', ['vis-dashboard-css'], $tab_ver);
         }
         if ($activeTab === 'security_center') {
-            wp_enqueue_style('vis-security-center-css', VIS_URL . 'assets/css/vis-security-center.css', ['vis-dashboard-css'], $version);
+            $sc_css = defined('VIS_PATH') ? VIS_PATH . 'assets/css/vis-security-center.css' : '';
+            $sc_ver = (file_exists($sc_css)) ? $base_version . '.' . filemtime($sc_css) : $version;
+            wp_enqueue_style('vis-security-center-css', VIS_URL . 'assets/css/vis-security-center.css', ['vis-dashboard-css'], $sc_ver);
             wp_enqueue_style('vis-dashboard-view-systatus', VIS_URL . 'includes/dashboard/views/systatus/style.css', ['vis-dashboard-css'], $version);
             wp_enqueue_style('vis-dashboard-view-logs', VIS_URL . 'includes/dashboard/views/logs/style.css', ['vis-dashboard-css'], $version);
         }
@@ -54,6 +57,21 @@ final class VIS_Dashboard_Assets {
         if (in_array($activeTab, $viewScripts, true)) {
             $viewScriptPath = VIS_PATH . 'includes/dashboard/views/' . $activeTab . '/script.js';
             if (is_file($viewScriptPath)) wp_enqueue_script('vis-dashboard-view-' . $activeTab, VIS_URL . 'includes/dashboard/views/' . $activeTab . '/script.js', ['vis-dashboard-js'], $version, true);
+        }
+        if ($activeTab === 'morpheus') {
+            $morpheusIsoToken = '';
+            try {
+                if (class_exists('\\VisionGaia\\GeDefense\\Modules\\Morpheus\\Morpheus')) {
+                    $morpheusIsoToken = \VisionGaia\GeDefense\Modules\Morpheus\Morpheus::get_instance()->dashboard->generate_isolation_token();
+                }
+            } catch (\Throwable $e) {
+                $morpheusIsoToken = '';
+            }
+            wp_localize_script('vis-dashboard-view-morpheus', 'visMorpheusConfig', [
+                'nonce'          => wp_create_nonce('vgt_morpheus_action'),
+                'isolationToken' => $morpheusIsoToken,
+                'ajaxUrl'        => admin_url('admin-ajax.php'),
+            ]);
         }
         if ($activeTab === 'aegis') {
             wp_enqueue_script('vis-oracle-diagnostics', VIS_URL . 'assets/js/vis-oracle-diagnostics.js', [], $version, true);

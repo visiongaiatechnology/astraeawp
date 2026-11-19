@@ -1,6 +1,6 @@
 # GeDefense Scanner Evidence Triage
 
-**Distribution:** AstraeaOS WP `0.6.0-alpha`
+**Distribution:** AstraeaOS WP `0.8.0`
 
 ## Classification model
 

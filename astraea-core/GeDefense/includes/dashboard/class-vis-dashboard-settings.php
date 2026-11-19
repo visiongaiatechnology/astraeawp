@@ -167,10 +167,13 @@ final class VIS_Dashboard_Settings {
         if ($context === 'setup_wizard') {
             update_option('vgt_setup_wizard_completed', 1);
 
-            if (!empty($updated_config['throneguard_enabled']) && class_exists('VIS_Throne_Guard')) {
+            $canManageThroneGuard = class_exists('VIS_Throne_Guard')
+                && (!VIS_Throne_Guard::master_exists() || current_user_can(VIS_Throne_Guard::MASTER_CAP));
+
+            if (!empty($updated_config['throneguard_enabled']) && $canManageThroneGuard) {
                 VIS_Throne_Guard::provision_current_master();
             }
-            if (class_exists('VIS_Throne_Guard')) {
+            if ($canManageThroneGuard) {
                 VIS_Throne_Guard::apply_administrator_policy(!empty($updated_config['throneguard_enabled']) && !empty($updated_config['throneguard_harden_admin']));
             }
 
@@ -186,40 +189,42 @@ final class VIS_Dashboard_Settings {
                 }
             }
 
-            if (!empty($_POST['vis_aegis_oracle_key'])) {
-                $aegis_key = is_string($_POST['vis_aegis_oracle_key']) ? trim(sanitize_text_field(wp_unslash($_POST['vis_aegis_oracle_key']))) : '';
-                if ($aegis_key !== '') {
-                    if (!class_exists('VIS_Key_Vault') && is_readable(VIS_PATH . 'includes/modules/vault/class-vis-key-vault.php')) {
-                        require_once VIS_PATH . 'includes/modules/vault/class-vis-key-vault.php';
-                    }
-                    if (class_exists('VIS_Key_Vault')) {
-                        VIS_Key_Vault::save_key('vis_aegis_ai_key', $aegis_key);
-                    }
-                }
-            }
-
             if (isset($_POST['vis_zeus_config']) && is_array($_POST['vis_zeus_config'])) {
                 $zeus_raw = wp_unslash($_POST['vis_zeus_config']);
-                $zeus_clean = [
-                    'fw_basic'             => isset($zeus_raw['fw_basic']),
-                    'fw_6g_blacklist'      => isset($zeus_raw['fw_6g_blacklist']),
-                    'fw_fake_googlebot'    => isset($zeus_raw['fw_fake_googlebot']),
-                    'fw_block_xmlrpc'      => isset($zeus_raw['fw_block_xmlrpc']),
-                    'brute_rename_login'   => sanitize_text_field($zeus_raw['brute_rename_login'] ?? ''),
-                    'brute_magic_cookie'   => sanitize_text_field($zeus_raw['brute_magic_cookie'] ?? ''),
-                    'brute_404_lockout'    => 20,
-                    'user_login_lockdown'  => 5,
-                    'user_force_logout'    => 3600,
-                    'fs_disable_edit'      => false,
-                    'fs_prevent_hotlink'   => false,
-                    'spam_comment_block'   => false
-                ];
-                update_option('vis_zeus_config', $zeus_clean);
-                self::deploy_zeus_safely();
+                VIS_Dashboard_Ajax::ensure_zeus_dependencies();
+                if (class_exists('\VisionGaia\GeDefense\Modules\Zeus\Zeus_Config_Repository')) {
+                    try {
+                        \VisionGaia\GeDefense\Modules\Zeus\Zeus_Config_Repository::save($zeus_raw);
+                    } catch (\Throwable $e) {
+                        error_log('[ZEUS SETUP WIZARD] ' . $e->getMessage());
+                    }
+                } else {
+                    self::deploy_zeus_safely();
+                }
             }
 
             // Flush rewrite rules automatically to bind Hades stealth routing
             flush_rewrite_rules(true);
+        }
+
+        // AEGIS Oracle key: the field is offered on the AEGIS tab as well as in
+        // the setup wizard. Handling it only for setup_wizard silently dropped
+        // every key entered on the AEGIS tab, so AEGIS kept reporting
+        // "SCHLÜSSEL FEHLT".
+        if (($context === 'aegis' || $context === 'all' || $context === 'setup_wizard') && !empty($_POST['vis_aegis_oracle_key'])) {
+            $aegis_key = is_string($_POST['vis_aegis_oracle_key']) ? trim(sanitize_text_field(wp_unslash($_POST['vis_aegis_oracle_key']))) : '';
+            if ($aegis_key !== '') {
+                if (!class_exists('VIS_Key_Vault') && is_readable(VIS_PATH . 'includes/modules/vault/class-vis-key-vault.php')) {
+                    require_once VIS_PATH . 'includes/modules/vault/class-vis-key-vault.php';
+                }
+                if (class_exists('VIS_Key_Vault')) {
+                    try {
+                        VIS_Key_Vault::save_key('vis_aegis_ai_key', $aegis_key);
+                    } catch (\Throwable $e) {
+                        error_log('[VGT AEGIS] Oracle key could not be sealed: ' . $e->getMessage());
+                    }
+                }
+            }
         }
 
         // --- VGT POST-SAVE TRIGGERS ---
@@ -336,6 +341,13 @@ final class VIS_Dashboard_Settings {
                 : (isset($_GET['xdr_section']) && is_string($_GET['xdr_section']) ? sanitize_key(wp_unslash($_GET['xdr_section'])) : 'policy');
             if ($xdr_sec !== '') {
                 $redirect_args['xdr_section'] = $xdr_sec;
+            }
+        } elseif ($context === 'styx') {
+            $styx_sec = isset($_POST['styx_section']) && is_string($_POST['styx_section'])
+                ? sanitize_key(wp_unslash($_POST['styx_section']))
+                : (isset($_GET['styx_section']) && is_string($_GET['styx_section']) ? sanitize_key(wp_unslash($_GET['styx_section'])) : 'outbound');
+            if ($styx_sec !== '') {
+                $redirect_args['styx_section'] = $styx_sec;
             }
         }
 

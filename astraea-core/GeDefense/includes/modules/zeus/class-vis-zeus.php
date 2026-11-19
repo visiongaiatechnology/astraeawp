@@ -22,6 +22,8 @@ class VIS_Zeus {
     private $compiler;
     private $shield;
 
+    private static bool $php_hardening_checked = false;
+
     public function __construct() {
         $this->load_dependencies();
 
@@ -35,6 +37,24 @@ class VIS_Zeus {
         $this->swarm_ip  = $this->get_swarm_ip($this->client_ip);
 
         $this->init_modules();
+        $this->ensure_php_upload_progress_hardening();
+    }
+
+    /**
+     * The mitigation must reach existing installations without waiting for an operator to save
+     * the shield again. One content check per request bootstraps it; the environment manager only
+     * writes when the directive is missing.
+     */
+    private function ensure_php_upload_progress_hardening(): void {
+        if ( self::$php_hardening_checked ) {
+            return;
+        }
+        self::$php_hardening_checked = true;
+        try {
+            $this->env_manager->ensure_upload_progress_hardening();
+        } catch ( \Throwable $e ) {
+            error_log( '[ZEUS PHP HARDENING] ' . $e->getMessage() );
+        }
     }
 
     public static function getDefaultConfig(): array {
@@ -60,9 +80,43 @@ class VIS_Zeus {
 
     private function init_modules(): void {
         $this->env_manager = new VIS_Zeus_Env($this->vault_dir, $this->waf_file, $this->config);
-        $this->compiler    = new VIS_Zeus_Compiler($this->vault_dir, $this->waf_file, $this->config, $this->swarm_ip);
+        $this->compiler    = new VIS_Zeus_Compiler($this->vault_dir, $this->waf_file, $this->config, '');
         $this->shield      = new VIS_Zeus_Shield($this->config, $this->client_ip, $this->swarm_ip, $this->vault_dir);
         $this->shield->init_hooks();
+
+        $this->ensure_waf_compiler_version();
+    }
+
+    private function ensure_waf_compiler_version(): void {
+        if (!is_file($this->waf_file) || !is_readable($this->waf_file)) {
+            return;
+        }
+        $fh = @fopen($this->waf_file, 'rb');
+        if (!$fh) {
+            return;
+        }
+        $header = (string)@fread($fh, 512);
+        @fclose($fh);
+
+        $expected_marker = 'COMPILER_VERSION: ' . VIS_Zeus_Compiler::COMPILER_VERSION;
+        if (!str_contains($header, $expected_marker)) {
+            try {
+                $this->compiler->deploy_waf();
+            } catch (\Throwable $e) {
+                error_log('[ZEUS SELF-HEAL] Failed to recompile outdated WAF kernel: ' . $e->getMessage());
+            }
+        }
+    }
+
+    public static function recompile_waf(): bool {
+        try {
+            $instance = new self();
+            $instance->compiler->deploy_waf();
+            return is_file($instance->waf_file) && is_readable($instance->waf_file);
+        } catch (\Throwable $e) {
+            error_log('[ZEUS RECOMPILE] ' . $e->getMessage());
+            return false;
+        }
     }
 
     public function deploy_perimeter_shield(): array {
@@ -86,8 +140,11 @@ class VIS_Zeus {
     }
 
     private function extract_deterministic_ip(): string {
-        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP']) && filter_var($_SERVER['HTTP_CF_CONNECTING_IP'], FILTER_VALIDATE_IP)) {
-            return $_SERVER['HTTP_CF_CONNECTING_IP'];
+        if (class_exists('VIS_Security') && method_exists('VIS_Security', 'client_ip')) {
+            $client_ip = \VIS_Security::client_ip();
+            if ($client_ip !== '0.0.0.0' && filter_var($client_ip, FILTER_VALIDATE_IP)) {
+                return $client_ip;
+            }
         }
         if (!empty($_SERVER['REMOTE_ADDR']) && filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP)) {
             return $_SERVER['REMOTE_ADDR'];

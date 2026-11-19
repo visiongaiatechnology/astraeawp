@@ -1,6 +1,6 @@
 # AstraeaOS WP — GeDefense First-Party Security Kernel
 
-**Distribution:** AstraeaOS WP `0.1.0-alpha`  
+**Distribution:** AstraeaOS WP `0.8.0`  
 **Integration Status:** Native First-Party Core Security Module  
 **Location:** `/astraea-core/GeDefense/`  
 

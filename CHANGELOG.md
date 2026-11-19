@@ -1,5 +1,44 @@
 # AstraeaOS WP Changelog
 
+## 0.8.0 — 2026-11-19
+
+### Pure AstraeaOS line (SonaMedia split-off)
+- Split the distribution off `AstraeaOS_SonaMedia_7.1.4`. AstraeaOS WP now ships only the first-party Astraea kernel; the SonaMedia project skin is gone.
+- Removed `astraea-core/SonaMediaVod/` (native VoD kernel: API controller, encoder, share links, admin UI, CLI commands, admin assets) together with its `BACKEND-NOTES` documents.
+- Removed `astraea-core/Modules/CoreModules/SonaMediaVodModule.php` and its registration in `Modules/ModuleBootstrap.php`.
+- Removed `wp-content/plugins/Mediathek/` (VoD/Mediathek plugin and its compatibility stub).
+- Removed `wp-content/themes/MedianetTheme/` (Sonamedia theme incl. `Designs/vgt-brave`).
+- Removed `wp-content/mu-plugins/sonamedia-umbau.php` (maintenance gate MU-plugin) and the now-empty `mu-plugins` directory.
+- Removed `docs/sonamedia-nginx-waf-hardened.conf`, the Sonamedia infrastructure/streaming dossiers and the SonaMedia architecture dossier, plus the `lab-results-2026-11-17` bundle that evidenced the SonaMedia artifact.
+- Removed `tests/SonaMediaVodTest.php` and its wiring in `tests/run_tests.php`.
+- `VIS_PRODUCT_NAME` in the embedded GeDefense kernel is now `GeDefense WP 8.6.0 — AstraeaOS Security Kernel` (SonaMedia branding dropped).
+
+### WordPress 7.1.5 rebase
+- Upstream core upgraded from WordPress `7.1.4-de_DE` to `7.1.5-de_DE`.
+- The bundled upstream theme `twentytwentytwo` is no longer shipped, matching upstream 7.1.5; `twentytwentythree`, `twentytwentyfour` and `twentytwentyfive` remain. Sites that still use `twentytwentytwo` must keep it from their own installation or switch themes.
+- Astraea lifecycle hooks re-applied at the two surgical anchor points in `wp-settings.php` (Phase B after the l10n subsystem, Phase D before MU plugins).
+- `wp-includes/version.php` keeps the Astraea environment hardening (PHP 8.3+, MySQL 8.0+, mandatory `sodium`/`openssl`/`mbstring`/`intl` extensions, `ASTRAEA_VERSION`) with `$wp_version` set to `7.1.5`.
+- Secure Genesis installer surfaces (`wp-admin/install.php`, `wp-admin/setup-config.php`) and their assets re-applied; upstream shipped no changes to these files between 7.1.4 and 7.1.5.
+- **Dropped the `wp-includes/default-constants.php` patch.** `WP_DEFAULT_THEME` is back to the upstream value, so the default theme is no longer overridden by the distribution.
+
+### GeDefense module integrity repair
+- Fixed an inherited bookkeeping defect in the embedded GeDefense trust anchor: the pinned `integrity/module-manifest.json` listed the `gorgon` component with **7 files**, while the tree ships 6. `VIS_Module_Integrity::verify_all()` therefore reported `27/28` with `gorgon = MODIFIED` (already broken in the 7.1.4 SonaMedia build, so not introduced by the split).
+- Cross-checked against the authoritative source `GeDefense-WP-8.6.0-Open-Core\gedefensewp-main`: `gorgon` is byte-identical in both trees (6 files, `root_hash 82be48ea…`), and the upstream manifest verifies `28/28` there. No code was missing or modified — the manifest entry was wrong.
+- Corrected the `gorgon` entry to `files: 6` / `82be48ea…`, recomputed the manifest hash and re-pinned `VIS_MANIFEST_DIGEST = 9c3403ed…` in `GeDefenseKernel.php` and `gedefense-wp.php`. Result: **28/28 VERIFIED**.
+- New release guards in `tests/run_release_checks.php`: the kernel must pin a manifest digest, the digest must hash the shipped manifest, and `VIS_Module_Integrity::verify_all()` must verify all 28 components.
+
+### Repository and release hygiene
+- Repository prepared for public publication: internal working hand-off notes, lab environment reports and stale internal QA/packaging reports are not part of the tree.
+- Added `.gitignore` (secrets, runtime state, build output, internal notes) and `.gitattributes` (`* -text`) so the SHA-256 manifests stay byte-exact on checkout.
+- Restored public assets that belonged to the project but were missing from the working tree: `.github/` issue and pull-request templates, the reproducible benchmark suite under `benchmarks/`, and the English/Russian alpha handbooks under `docs/`.
+- Benchmark runner received a minimal object-cache shim (`wp_cache_get/set/delete`, `wp_json_encode`); it previously aborted in the GeDefense Aegis step because it was written against the pre-8.6.0 kernel. Its baseline `benchmark_results.json` was regenerated on the current tree.
+- `tools/build-release.php` now excludes `.git/` from the manifest scan, so `--verify-only` works inside a Git checkout.
+
+### Versioning and guards
+- `Astraea\Version::VERSION` is now `0.8.0`; new constant `Astraea\Version::WP_BASE = '7.1.5'` documents the upstream base in code.
+- `tests/run_release_checks.php` asserts the new version/base and now fails closed if SonaMedia artefacts (VoD kernel, Mediathek plugin, MedianetTheme, MU-plugin) reappear.
+- `BUILD-MANIFEST.json` regenerated for the reduced file corpus.
+
 ## 0.6.0-alpha — 2026-09-05
 
 ### GeDefense 8.2.4 Multi-Layer Defense & Threat Intelligence

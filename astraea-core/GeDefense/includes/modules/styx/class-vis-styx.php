@@ -64,6 +64,12 @@ final class Styx {
         if (!$this->block_wp_telemetry) {
             $hosts = ['api.wordpress.org', 'downloads.wordpress.org'];
         }
+
+        // The site itself is never "egress": WP-Cron, loopback health checks and
+        // plugin-internal callbacks must remain functional.
+        foreach ($this->own_hosts() as $own_host) {
+            $hosts[] = $own_host;
+        }
         
         if (defined('WP_ACCESSIBLE_HOSTS')) {
             $extra = explode(',', WP_ACCESSIBLE_HOSTS);
@@ -86,23 +92,54 @@ final class Styx {
         }
     }
 
+    /**
+     * @return array<int, string>
+     */
+    private function own_hosts(): array {
+        $candidates = [];
+        if (function_exists('home_url')) $candidates[] = (string) home_url();
+        if (function_exists('site_url')) $candidates[] = (string) site_url();
+        // Niemals unvalidierte Request-Header ($_SERVER['HTTP_HOST'] / SERVER_NAME) als eigene Hosts annehmen (FIND-006).
+        if (!empty($_SERVER['SERVER_ADDR'])) $candidates[] = (string) $_SERVER['SERVER_ADDR'];
+
+        $hosts = [];
+        foreach ($candidates as $candidate) {
+            $candidate = trim($candidate);
+            if ($candidate === '') continue;
+            $host = parse_url(str_contains($candidate, '://') ? $candidate : 'http://' . $candidate, PHP_URL_HOST);
+            if (!is_string($host) || $host === '') continue;
+            $host = rtrim(strtolower($host), '.');
+            if ($host !== '') $hosts[] = $host;
+        }
+        return array_values(array_unique($hosts));
+    }
+
     public function intercept_outbound($preempt, array $args, string $url) {
         $this->initialize();
 
         // MASTER KILL-SWITCH: Absolute Ignoranz, wenn STYX deaktiviert ist
         if (!$this->is_enabled) return $preempt;
 
-        // SSRF-Bypass & Obfuscation Defense (wp_parse_url & Sanitization)
+        // SSRF-Bypass & Obfuscation Defense (wp_parse_url & IPv6-safe Sanitization, FIND-006)
         $decoded_url = urldecode($url);
         $parsed_host = wp_parse_url($decoded_url, PHP_URL_HOST);
         
-        if (!$parsed_host) return $preempt;
+        if (!is_string($parsed_host) || trim($parsed_host) === '') {
+            return new \WP_Error('vgt_styx_blocked', 'VGT STYX: Invalid or missing outbound host rejected.');
+        }
 
-        // Normalisierung gegen Trailing-Dots, Case-Mismatch und Octal/Hex/Null-Byte Injections
-        $host = preg_replace('/[^a-zA-Z0-9.-]/', '', $parsed_host);
-        $host = rtrim(strtolower(trim($host)), '.');
+        $unbracketed = trim($parsed_host, "[] \t\r\n");
+        if (filter_var($unbracketed, FILTER_VALIDATE_IP) !== false) {
+            $host = strtolower($unbracketed);
+        } else {
+            // Normalisierung gegen Trailing-Dots, Case-Mismatch und Octal/Hex/Null-Byte Injections
+            $host = preg_replace('/[^a-zA-Z0-9.-]/', '', $parsed_host);
+            $host = rtrim(strtolower(trim((string)$host)), '.');
+        }
         
-        if (empty($host)) return $preempt;
+        if ($host === '') {
+            return new \WP_Error('vgt_styx_blocked', 'VGT STYX: Host normalization rejected empty/malformed target.');
+        }
 
         $origin = $this->detect_origin();
         $is_allowed = $this->check_host($host, $origin);
@@ -158,6 +195,25 @@ final class Styx {
                 }
             }
         }
+
+        // Threat Intelligence Outbound Check (Blocks known C2, Botnet, and Malicious IP Nodes)
+        if (class_exists('\VisionGaia\GeDefense\Modules\ThreatIntel\ThreatIntelligence')) {
+            $threat_intel = \VisionGaia\GeDefense\Modules\ThreatIntel\ThreatIntelligence::instance();
+
+            // AUTONOMOUS SYSTEM BYPASS: Threat Intelligence self-synchronization
+            // Erlaubt ausschließlich die fest programmierten Feed-Domains, wenn Threat Intelligence selbst synchronisiert.
+            // Verhindert, dass fremde Plugins oder manipulierte Aufrufe den Egress Shield umgehen können.
+            if (in_array($host, \VisionGaia\GeDefense\Modules\ThreatIntel\ThreatIntelligence::TRUSTED_FEED_HOSTS, true)) {
+                if ($origin === 'THREAT_INTEL' || \VisionGaia\GeDefense\Modules\ThreatIntel\ThreatIntelligence::is_sync_in_progress()) {
+                    return true;
+                }
+            }
+
+            if ($threat_intel->is_outbound_enabled() && $threat_intel->is_ip_threat($host)) {
+                return false;
+            }
+        }
+
         // O(1) Exact Match
         if (isset($this->exact_hosts[$host])) return true;
         
@@ -174,16 +230,17 @@ final class Styx {
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 20);
         
         // Dynamische Architektur-Auflösung (Bedrock/Trellis Support)
-        $plugin_dir = defined('WP_PLUGIN_DIR') ? wp_normalize_path((string)WP_PLUGIN_DIR) : (defined('WP_CONTENT_DIR') ? wp_normalize_path((string)WP_CONTENT_DIR . '/plugins') : (defined('ABSPATH') ? wp_normalize_path(ABSPATH . 'wp-content/plugins') : ''));
-        $theme_dir  = function_exists('get_theme_root') ? wp_normalize_path(get_theme_root()) : (defined('WP_CONTENT_DIR') ? wp_normalize_path((string)WP_CONTENT_DIR . '/themes') : (defined('ABSPATH') ? wp_normalize_path(ABSPATH . 'wp-content/themes') : ''));
+        $plugin_dir = defined('WP_PLUGIN_DIR') ? wp_normalize_path(WP_PLUGIN_DIR) : wp_normalize_path(WP_CONTENT_DIR . '/plugins');
+        $theme_dir  = function_exists('get_theme_root') ? wp_normalize_path(get_theme_root()) : wp_normalize_path(WP_CONTENT_DIR . '/themes');
         
         foreach ($trace as $step) {
             if (!isset($step['file'])) continue;
             
-            $file = function_exists('wp_normalize_path') ? wp_normalize_path((string)$step['file']) : str_replace('\\', '/', (string)$step['file']);
-            
-            // Threat Intelligence Subsystem Erkennung
-            if (str_contains($file, 'class-vis-threat-intel.php') || str_contains($file, 'threat-intel')) {
+            $file = wp_normalize_path($step['file']);
+
+            // Threat Intelligence Subsystem Erkennung (exakte Modul-Pfadprüfung, FIND-006)
+            $ti_root = defined('VIS_PATH') ? wp_normalize_path(VIS_PATH) . 'includes/modules/threat-intel/' : '';
+            if ($ti_root !== '' && str_starts_with($file, $ti_root)) {
                 return 'THREAT_INTEL';
             }
             

@@ -10,8 +10,8 @@
 
 <br>
 
-![Release](https://img.shields.io/badge/Release-ALPHA-00D9FF?style=for-the-badge)
-![WordPress](https://img.shields.io/badge/Upstream-WordPress%207.1-21759B?style=for-the-badge&logo=wordpress&logoColor=white)
+![Release](https://img.shields.io/badge/Release-0.8.0%20ALPHA-00D9FF?style=for-the-badge)
+![WordPress](https://img.shields.io/badge/Upstream-WordPress%207.1.5-21759B?style=for-the-badge&logo=wordpress&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)
 ![Database](https://img.shields.io/badge/Database-MySQL%208%2B%20%7C%20MariaDB%2010.11%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 
@@ -30,15 +30,90 @@
 
 ---
 
+## 🆕 What's new in 0.8.0 — Pure AstraeaOS Line (WordPress 7.1.5)
+
+**Released:** 2026-11-19 · **Distribution:** `0.8.0` · **Upstream base:** WordPress `7.1.5-de_DE` · **GeDefense:** `8.6.0-astraea` · **First-party modules:** 17
+
+Three things happened in this release: the distribution was split off the **SonaMedia** project build, the WordPress core was rebased to **7.1.5**, and the split was used to **shrink the attack surface** and lock it down with fail-closed release guards.
+
+### 🧬 1. Split-off: AstraeaOS WP is now a standalone line
+
+Everything that carried the Sonamedia project has been removed from this distribution. It was project skin, not kernel — and it is now maintained only in the separate `AstraeaOS_SonaMedia` build.
+
+| Removed from AstraeaOS WP | What it was |
+|---|---|
+| `astraea-core/SonaMediaVod/` | Native VoD streaming kernel (HLS/AES-128 API controller, FFmpeg encoder, share links, admin UI, CLI commands, assets) |
+| `astraea-core/Modules/CoreModules/SonaMediaVodModule.php` | Module registration in `BootPhase::PHASE_E`, incl. its `ModuleBootstrap` entry |
+| `wp-content/plugins/Mediathek/` | VoD/Mediathek plugin and its compatibility stub |
+| `wp-content/themes/MedianetTheme/` | Sonamedia theme incl. `Designs/vgt-brave` design package |
+| `wp-content/mu-plugins/sonamedia-umbau.php` | Maintenance/preview gate MU-plugin (the `mu-plugins` directory itself is gone) |
+| `docs/sonamedia-nginx-waf-hardened.conf`, SonaMedia dossiers, `lab-results-2026-11-17` | Project-specific ops config and evidence bundles |
+| `tests/SonaMediaVodTest.php` | VoD/theme test suite, including its runner wiring |
+
+What remains is the part that belongs to the operating system: **17 first-party modules** (Recovery, GeDefense, Vault, VLP, Mail, Performance, Media, Redirects, SEO, Forms, Tasks, Database, Maintenance, Identity, Update, Compatibility, Migration) on a clean upstream core.
+
+### ⬆️ 2. WordPress 7.1.5 rebase — upstream fixes fully ingested
+
+The core was rebased from `7.1.4-de_DE` to `7.1.5-de_DE` without a single merge conflict, because Astraea only touches four upstream source files (plus the two branded offline readmes). The upstream delta was ingested in full, including the REST and editor surface:
+
+- **REST API:** posts, comments, templates and term-search controllers (`class-wp-rest-posts-controller`, `-comments-`, `-templates-`, `search/class-wp-rest-term-search-handler`), `rest-api.php`
+- **Query core:** `class-wp-query.php`, `class-wp-meta-query.php`
+- **Formatting / shortcodes / loader:** `formatting.php`, `shortcodes.php`, `load.php`
+- **Interactivity API:** `interactivity-api/interactivity-api.php`
+- **Customizer:** `class-wp-customize-manager`, `-setting`, `-nav-menus`
+- **Block & editor bundles:** regenerated `wp-includes/js/dist/*` (`editor`, `core-data`, `block-library`, script modules)
+
+Upstream fixes are tracked by the WordPress project; this distribution does not relabel them with its own CVE identifiers. What is verified here is that **no Astraea patch point blocked or swallowed any of them** — the hook blocks and the Secure Genesis installer were re-applied on top of the 7.1.5 files, and `$wp_version` is the untouched upstream value `7.1.5`.
+
+### 🔐 3. Security work in this release
+
+| Area | Change | Effect |
+|---|---|---|
+| **Attack surface** | VoD kernel, Mediathek plugin, theme and maintenance MU-plugin removed | No public HLS segment endpoints, no `X-Accel-Redirect` vault surface, no FFmpeg invocation path, no project-specific MU-plugin executing before regular plugins |
+| **Core patch surface** | `wp-includes/default-constants.php` patch **dropped** — `WP_DEFAULT_THEME` is the upstream value again | One less core override to re-review on every upstream rebase; no distribution-forced theme |
+| **Split regression guard** | 10 new fail-closed checks in `tests/run_release_checks.php` | The release gate fails if any SonaMedia artefact (kernel, module, plugin, theme, MU-plugin) is reintroduced |
+| **Environment floor** | `version.php` keeps PHP `8.3`+, MySQL `8.0`+, and mandatory `sodium` / `openssl` / `mbstring` / `intl` | Boot aborts on a runtime that cannot provide the crypto primitives the kernel depends on, instead of silently degrading |
+| **Installer** | Secure Genesis re-applied on 7.1.5: CSPRNG-only salts (no `api.wordpress.org/secret-key` fallback), byte-exact DB password, randomized `ast_xxxxxxxx_` table prefix, `wp-config.php` written `0600` with rollback if owner-only permissions cannot be enforced | No remote secret dependency, no world-readable config, no predictable prefix |
+| **Secret storage** | External master-key and keyring store outside the webroot (`0700`/`0600`) when the hosting layout allows it | Secrets stay out of the document root; the installer reports the compatibility mode when it cannot |
+| **Integrity baseline** | `BUILD-MANIFEST.json` regenerated for the reduced corpus (root + `astraea-core`, SHA-256) | The 523-file core corpus and the full tree are individually verifiable; stale hashes from the SonaMedia build are gone |
+| **GeDefense trust anchor** | Inherited manifest defect repaired: `gorgon` was pinned with 7 files while 6 ship (self-check showed `27/28`). Proven byte-identical to the authoritative open-core source, entry corrected, `VIS_MANIFEST_DIGEST` re-pinned (`9c3403ed…`) | The embedded kernel now verifies **28/28** components against its pinned anchor, guarded by release checks instead of trusted silently |
+| **Identity hygiene** | `VIS_PRODUCT_NAME` no longer carries SonaMedia branding; version is a single source of truth (`Astraea\Version`) | Telemetry, logs and the update manifest cannot advertise a product line that is not shipped |
+
+### ✅ Verified in this build
+
+| Gate | Result |
+|---|---|
+| `php tests/run_tests.php` | **698 assertions, 0 failures** |
+| `php tests/run_release_checks.php` | **113 passed, 0 failed** (incl. 10 split guards + GeDefense trust-anchor guard) |
+| GeDefense module integrity (`VIS_Module_Integrity::verify_all()`) | **28/28 components VERIFIED** against the pinned manifest |
+| `php tools/build-release.php` / `--verify-only` | **exit 0** — manifests generated and verified, `UNSIGNED` (no offline Ed25519 key in this build) |
+| GeDefense regression (`audit-fixes`, `hardening`, `integration`) | **all PASS** (`hardening`: 72 assertions) |
+| Core diff vs. pristine WordPress 7.1.5 (SHA-256) | **6 modified, 0 deleted, 600 added** files |
+
+> The release manifest is **`UNSIGNED`**. Local SHA-256 integrity is covered; there is no VGT offline Ed25519 authenticity signature on this artifact. Do not present an unsigned build as a signed Astraea release — the authenticated Update Engine is expected to reject it.
+
+### ⚠️ Upgrade notes (0.7.x → 0.8.0)
+
+- **No database migration.** `$wp_db_version` is `61833` in both 7.1.4 and 7.1.5, so schema and `wp-config.php` stay compatible.
+- **Module list changed.** `sonamedia-vod` no longer exists. Leftover option/meta rows from a SonaMedia build are inert; nothing in the Astraea kernel reads them.
+- **Default theme.** If you relied on the distribution forcing `MedianetTheme`, it is no longer installed or forced. Select your theme explicitly.
+- **SonaMedia deployments stay on the SonaMedia build.** `sonamedia.de` keeps its own tree (HLS vault, `/protected-hls/`, `VGT_USE_X_ACCEL_REDIRECT`). This line was not back-ported into it.
+- **`Astraea\Version::WP_BASE`** is new (`'7.1.5'`) — use it for base-version assertions instead of parsing `$wp_version`.
+
+Full detail: [RELEASE_NOTES.md](./RELEASE_NOTES.md) · [CHANGELOG.md](./CHANGELOG.md) · [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) (verification gates) · [docs/CORE_DIFF.md](./docs/CORE_DIFF.md) (exhaustive core diff) · [docs/UPSTREAM_STRATEGY.md](./docs/UPSTREAM_STRATEGY.md) (rebase runbook)
+
+---
+
 ## 📚 Documentation — start here
 
 The manuals and architecture documentation are intentionally stored in the **repository root** so they are immediately visible in GitHub releases and source archives.
 
 | Document | Language / Purpose |
 |---|---|
-| 🇩🇪 **[AstraeaOS WP Handbuch — Alpha-Reihe](./AstraeaOS_WP_Handbuch_Alpha-Reihe.pdf)** | German handbook |
-| 🇬🇧 **[AstraeaOS WP Handbook — Alpha Series](./AstraeaOS_WP_Handbook_Alpha-Series_EN.pdf)** | English handbook |
-| 🇷🇺 **[AstraeaOS WP Руководство — Alpha Series](./AstraeaOS_WP_Handbook_Alpha-Series_RU.pdf)** | Russian handbook |
+| 🇩🇪 **[AstraeaOS WP Handbuch — Alpha-Reihe](./docs/AstraeaOS_WP_Handbuch_Alpha-Reihe.pdf)** | German handbook |
+| 🇬🇧 **[AstraeaOS WP Handbook — Alpha Series](./docs/AstraeaOS_WP_Handbook_Alpha-Series_EN.pdf)** | English handbook |
+| 🇷🇺 **[AstraeaOS WP Руководство — Alpha Series](./docs/AstraeaOS_WP_Handbook_Alpha-Series_RU.pdf)** | Russian handbook |
+| 📊 **[docs/BENCHMARKS.md](./docs/BENCHMARKS.md)** and **[benchmarks/](./benchmarks/benchmark_results.json)** | Reproducible benchmark suite (`php benchmarks/run_benchmarks.php`) and its latest baseline |
 | 🏗️ **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Full technical architecture map |
 | 🛡️ **[SECURITY.md](./SECURITY.md)** | Security policy and reporting |
 | ♻️ **[RECOVERY.md](./RECOVERY.md)** | Recovery architecture and procedures |
@@ -1200,7 +1275,8 @@ A full record of all major milestones, architectural evolutions, and security ha
 
 | Release | Codename / Focus | Key Highlights | Status |
 |---|---|---|---|
-| **`0.6.0-alpha`** | **Sovereign Defense & Infrastructure Fabric** | GeDefense 8.2.4 (9 threat feeds, 3.10 µs IP swap, 10 HUD probes), Ingress & Anti-Polyglot hardening, Submenu & Cockpit UI fixes, Vault Step-Up in-place auth, 17 First-Party Kernel Modules, Secure Genesis | 🟢 Current Release |
+| **`0.8.0`** | **Pure AstraeaOS Line** | WordPress 7.1.5-de_DE rebase, SonaMedia split-off (no VoD kernel, no Mediathek plugin, no MedianetTheme, no SonaMedia MU-plugin), upstream default theme restored, GeDefense 8.6.0-astraea, fail-closed split guards in the release checks | 🟢 Current Release |
+| **`0.6.0-alpha`** | **Sovereign Defense & Infrastructure Fabric** | GeDefense 8.2.4 (9 threat feeds, 3.10 µs IP swap, 10 HUD probes), Ingress & Anti-Polyglot hardening, Submenu & Cockpit UI fixes, Vault Step-Up in-place auth, 17 First-Party Kernel Modules, Secure Genesis | 🔒 Superseded |
 | **`0.5.0-alpha`** | **Astraea Mail Gateway** | Zero-dependency SMTP, OAuth 2.0 Modern Auth (M365/Google), AEAD encrypted credentials (`MAIL_TRANSPORT`), StrictTLS 1.2/1.3, DKIM signing, SSRF circuit breaker | 🔒 Superseded |
 | **`0.4.0-alpha`** | **Privacy & Consent Fabric** | VLP Light, Astraea Keyring consent receipts (`VLP_CONSENT`), server-side HTML Tag Processor gate, local anonymous Dattrack telemetry | 🔒 Superseded |
 | **`0.3.1-alpha`** | **Glass Consistency Sweep** | Scoped Legacy Surface Adapter for wp-admin, dark glass tokens, modern setup & installation experience without external CDNs | 🔒 Superseded |
@@ -1210,7 +1286,17 @@ A full record of all major milestones, architectural evolutions, and security ha
 
 ---
 
-## 🚀 0.6.0-alpha — Sovereign Defense & Infrastructure Fabric (Latest)
+## 🚀 0.8.0 — Pure AstraeaOS Line (Latest)
+
+The full breakdown of this release — split-off inventory, WordPress 7.1.5 delta, security work, verification gates and upgrade notes — is documented at the top of this README:
+
+➡️ **[What's new in 0.8.0](#-whats-new-in-080--pure-astraeaos-line-wordpress-715)**
+
+Summary: SonaMedia split-off (VoD kernel, Mediathek plugin, MedianetTheme and maintenance MU-plugin removed), WordPress `7.1.4` → `7.1.5` rebase, `default-constants.php` patch dropped, new `Astraea\Version::WP_BASE`, and 10 fail-closed split guards in the release checks.
+
+---
+
+## 🚀 0.6.0-alpha — Sovereign Defense & Infrastructure Fabric
 
 ### 🛡️ GeDefense 8.2.4 Multi-Layer Defense & Threat Intelligence
 - **GeDefense Engine 8.2.4**: Boot-time pre-flight security engine uniting Cerberus L0 wire-speed ingress filtering, Zeus WAF, Aegis DPI, and Hades active perimeter protection.

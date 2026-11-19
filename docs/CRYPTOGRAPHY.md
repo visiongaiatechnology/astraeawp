@@ -1,6 +1,6 @@
 # AstraeaOS WP — Cryptographic Core Architecture
 
-**Distribution:** AstraeaOS WP `0.1.0-alpha`  
+**Distribution:** AstraeaOS WP `0.8.0`  
 **Primary Engine:** Libsodium AEAD (XChaCha20-Poly1305)  
 **Fallback Engine:** OpenSSL AEAD (AES-256-GCM)  
 **Key Derivation:** HKDF-SHA256 (RFC 5869) with Context Separation  

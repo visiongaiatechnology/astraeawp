@@ -43,18 +43,22 @@ class VIS_Dashboard_View {
             
             'section_privacy' => ['label' => __('V. DATENSCHUTZ & COMPLIANCE', 'vgt-sentinel'), 'type' => 'separator'],
             
-            'vlp'        => ['icon' => '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/>', 'label' => __('DATENSCHUTZ & SHADOW-NET', 'vgt-sentinel')],
+            'vlp'        => ['icon' => '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>', 'label' => __('DATENSCHUTZ & SHADOW-NET', 'vgt-sentinel')],
             'filesystem' => ['icon' => '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><rect x="9" y="11" width="6" height="4" rx="1"/><path d="M10 11V9a2 2 0 0 1 4 0v2"/>', 'label' => __('DATENSICHERHEIT', 'vgt-sentinel')],
             'vault'      => ['icon' => '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>', 'label' => __('SCHLÜSSEL-TRESOR', 'vgt-sentinel')],
 
             'section_system' => ['label' => __('VI. SYSTEM & ASSISTENT', 'vgt-sentinel'), 'type' => 'separator'],
             'throneguard'    => ['icon' => '<path d="M3 7l4 4 5-7 5 7 4-4-2 12H5L3 7z"/><line x1="5" y1="22" x2="19" y2="22"/>', 'label' => __('THRONEGUARD', 'vgt-sentinel')],
+            'linux_bridge'   => ['icon' => '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/><line x1="8" y1="12" x2="16" y2="12"/>', 'label' => __('LINUX BRIDGE', 'vgt-sentinel')],
             'loginpager'     => ['icon' => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/>', 'label' => __('LOGINPAGER', 'vgt-sentinel')],
             'downloads'      => ['icon' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>', 'label' => __('SICHERE DOWNLOADS', 'vgt-sentinel')],
             'modules'        => ['icon' => '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>', 'label' => __('ADD-ON VERWALTUNG', 'vgt-sentinel')],
             'setup_wizard'   => ['icon' => '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>', 'label' => __('EINRICHTUNGSASSISTENT', 'vgt-sentinel')],
         ];
 
+        if (isset($tabs['linux_bridge']) && class_exists('VIS_Linux_Bridge') && !VIS_Linux_Bridge::can_view()) {
+            unset($tabs['linux_bridge']);
+        }
         // Hide onboarding wizard tab if already completed
         $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : '';
         if ($active_tab === '' && isset($_GET['page'])) {
@@ -122,7 +126,7 @@ class VIS_Dashboard_View {
             echo '<input type="hidden" name="vis_save_config" value="1">';
             wp_nonce_field('vis_save_config');
             if ($active_tab === 'trinity') {
-                $current_xdr_sec = isset($_GET['xdr_section']) && is_string($_GET['xdr_section']) ? sanitize_key($_GET['xdr_section']) : 'overview';
+                $current_xdr_sec = isset($_GET['xdr_section']) && is_string($_GET['xdr_section']) ? sanitize_key($_GET['xdr_section']) : 'grid';
                 echo '<input type="hidden" name="xdr_section" value="' . esc_attr($current_xdr_sec) . '">';
             }
         }
@@ -164,9 +168,6 @@ class VIS_Dashboard_View {
 
         echo '<header class="vis-topbar">
                 <div class="vis-topbar-left">
-                    <button type="button" class="vis-nav-toggle" id="vis-mobile-nav-toggle" aria-label="' . esc_attr__('Menü umschalten', 'vgt-sentinel') . '" aria-expanded="false">
-                        <span></span><span></span><span></span>
-                    </button>
                     <div class="vis-breadcrumb">
                         <span>GE-DEFENSE</span> / <span class="active">' . esc_html($title) . '</span>
                     </div>

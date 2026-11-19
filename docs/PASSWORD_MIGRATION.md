@@ -1,6 +1,6 @@
 # AstraeaOS WP — Password Security & Migration Specification
 
-**Distribution:** AstraeaOS WP `0.1.0-alpha`  
+**Distribution:** AstraeaOS WP `0.8.0`  
 **Primary Algorithm:** `PASSWORD_ARGON2ID` (RFC 9106)  
 **Legacy Migration Strategy:** Verify Legacy → Rehash Modern  
 

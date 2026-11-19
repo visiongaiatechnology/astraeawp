@@ -54,7 +54,11 @@ final class VIS_Key_Vault {
 
         foreach ($keys_to_check as $const) {
             if (defined($const)) {
-                $salts .= constant($const);
+                $val = (string) constant($const);
+                // Reject default WordPress placeholder salts and trivial weak strings (FIND-004).
+                if ($val !== '' && stripos($val, 'put your unique phrase here') === false && strlen($val) >= 16) {
+                    $salts .= $val;
+                }
             }
         }
 
@@ -91,12 +95,24 @@ final class VIS_Key_Vault {
      * Verhindert die gezielte Manipulation oder das Überschreiben sensibler WP-Systemkonfigurationen.
      */
     private static function is_protected_option(string $option): bool {
+        $normalized = strtolower(trim($option));
         $blocklist = [
             'siteurl', 'home', 'blogname', 'admin_email', 'users_can_register',
             'default_role', 'active_plugins', 'template', 'stylesheet', 'current_theme',
-            'vis_vault_registry', 'vgt_sentinel_vault_system_salt', 'vgt_vault_registry_index'
+            'vis_config', 'vis_vault_registry', 'vgt_sentinel_vault_system_salt',
+            'vgt_vault_registry_index', 'vis_throneguard_superkey_hash', 'vis_throneguard_leases',
+            'vis_titan_policy_state', 'vis_titan_violations', 'vis_zeus_xdr_containment',
+            'vgt_learning_regex', 'cron', 'rewrite_rules', 'user_roles',
         ];
-        return in_array(strtolower(trim($option)), $blocklist, true) || str_starts_with(strtolower($option), 'wp_');
+        if (in_array($normalized, $blocklist, true)) {
+            return true;
+        }
+        foreach (['wp_', 'vis_throneguard_', 'vis_titan_', 'vis_zeus_', 'vgt_gorgon_'] as $prefix) {
+            if (str_starts_with($normalized, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -229,7 +245,84 @@ final class VIS_Key_Vault {
             throw new \RuntimeException("VGT Vault Error: Key [{$clean_identifier}] existiert nicht in der Matrix.");
         }
 
-        return self::decrypt((string) $payload, $clean_identifier);
+        try {
+            return self::decrypt((string) $payload, $clean_identifier);
+        } catch (\RuntimeException $e) {
+            // A previous build re-wrapped Key Vault ciphertext with the legacy
+            // VIS_Vault engine on every admin_init. Unwrap that envelope and
+            // re-seal the actual key so an already-damaged entry heals itself.
+            $recovered = self::recover_legacy_payload((string) $payload, $clean_identifier);
+            if ($recovered !== null) {
+                return $recovered;
+            }
+            throw $e;
+        }
+    }
+
+    /** Whether any payload is stored for this identifier (decryptable or not). */
+    public static function has_key(string $identifier): bool {
+        $clean_identifier = preg_replace('/[^a-zA-Z0-9_\-]/', '', $identifier);
+        return $clean_identifier !== '' && get_option($clean_identifier) !== false;
+    }
+
+    /**
+     * @return string missing|sealed|invalid
+     */
+    public static function key_state(string $identifier): string {
+        $clean_identifier = preg_replace('/[^a-zA-Z0-9_\-]/', '', $identifier);
+        if ($clean_identifier === '' || get_option($clean_identifier) === false) {
+            return 'missing';
+        }
+        try {
+            $plain = self::get_key($clean_identifier);
+        } catch (\Throwable $e) {
+            return 'invalid';
+        }
+        return $plain !== '' ? 'sealed' : 'invalid';
+    }
+
+    /**
+     * Recover a payload wrapped by the legacy VIS_Vault engine (vgt1: envelope).
+     * The recovered value may itself be a Key Vault ciphertext (the result of a
+     * double wrap), so it is unwrapped once more when possible.
+     */
+    private static function recover_legacy_payload(string $payload, string $identifier): ?string {
+        if (!str_starts_with($payload, 'vgt1:')) {
+            return null;
+        }
+        if (!class_exists('VIS_Vault')) {
+            $legacy = defined('VIS_PATH') ? VIS_PATH . 'class-vis-vault.php' : '';
+            if ($legacy === '' || !is_readable($legacy)) {
+                return null;
+            }
+            require_once $legacy;
+        }
+        if (!class_exists('VIS_Vault')) {
+            return null;
+        }
+        try {
+            $value = \VIS_Vault::decrypt($payload);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (!is_string($value) || $value === '') {
+            return null;
+        }
+        $plain = $value;
+        try {
+            $plain = self::decrypt($value, $identifier);
+        } catch (\Throwable $e) {
+            $plain = $value;
+        }
+        if (!is_string($plain) || $plain === '') {
+            return null;
+        }
+        try {
+            self::save_key($identifier, $plain);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        return $plain;
     }
 
     /**
@@ -244,6 +337,9 @@ final class VIS_Key_Vault {
 
         $encrypted = self::encrypt($plaintext, $clean_identifier);
         update_option($clean_identifier, $encrypted, false);
+        if ((string) get_option($clean_identifier, '') !== $encrypted) {
+            throw new \RuntimeException("VGT Vault Error: Key [{$clean_identifier}] konnte nicht gespeichert werden.");
+        }
         
         // O(1) Registrierung über assoziative Hash-Map
         $registry = get_option(self::REGISTRY_OPTION, []);
@@ -276,9 +372,27 @@ final class VIS_Key_Vault {
         if (empty($clean_identifier)) {
             return;
         }
+        if (self::is_protected_option($clean_identifier)) {
+            throw new \RuntimeException("VGT Vault Error: Geschützte Systemoption [{$clean_identifier}] kann nicht gelöscht werden.");
+        }
+
+        $registry = get_option(self::REGISTRY_OPTION, []);
+        $isRegistered = is_array($registry) && (isset($registry[$clean_identifier]) || in_array($clean_identifier, $registry, true));
+        if (!$isRegistered && preg_match('/^(?:vis|vgt)_[a-z0-9_]+(?:_key|_secret|_token)$/i', $clean_identifier) !== 1) {
+            throw new \RuntimeException("VGT Vault Error: Nicht registrierte Option [{$clean_identifier}] kann nicht über den Vault gelöscht werden.");
+        }
 
         delete_option($clean_identifier);
-        
+        if (get_option($clean_identifier) !== false) {
+            // Fall back to an explicit cache purge for stale alloptions entries.
+            wp_cache_delete($clean_identifier, 'options');
+            wp_cache_delete('alloptions', 'options');
+            delete_option($clean_identifier);
+        }
+        if (get_option($clean_identifier) !== false) {
+            throw new \RuntimeException("VGT Vault Error: Key [{$clean_identifier}] konnte nicht gelöscht werden.");
+        }
+
         $registry = get_option(self::REGISTRY_OPTION, []);
         if (is_array($registry)) {
             if (isset($registry[0])) {
@@ -286,8 +400,8 @@ final class VIS_Key_Vault {
             }
             if (isset($registry[$clean_identifier])) {
                 unset($registry[$clean_identifier]);
-                update_option(self::REGISTRY_OPTION, $registry, false);
             }
+            update_option(self::REGISTRY_OPTION, $registry, false);
         }
     }
 
@@ -336,6 +450,12 @@ final class VIS_Key_Vault {
      */
     public function handle_vault_actions(): void {
         if (!is_admin() || !current_user_can('manage_options') || empty($_POST['action'])) {
+            return;
+        }
+        // Require Sovereign Master capability when ThroneGuard Master protection is active (FIND-004).
+        if (class_exists('VIS_Throne_Guard')
+            && (VIS_Throne_Guard::master_exists() || (string)get_option('vis_throneguard_superkey_hash', '') !== '')
+            && !current_user_can(VIS_Throne_Guard::MASTER_CAP)) {
             return;
         }
 

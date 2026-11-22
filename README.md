@@ -36,23 +36,9 @@
 
 Three things happened in this release: the distribution was split off the **SonaMedia** project build, the WordPress core was rebased to **7.1.5**, and the split was used to **shrink the attack surface** and lock it down with fail-closed release guards.
 
-### 🧬 1. Split-off: AstraeaOS WP is now a standalone line
 
-Everything that carried the Sonamedia project has been removed from this distribution. It was project skin, not kernel — and it is now maintained only in the separate `AstraeaOS_SonaMedia` build.
 
-| Removed from AstraeaOS WP | What it was |
-|---|---|
-| `astraea-core/SonaMediaVod/` | Native VoD streaming kernel (HLS/AES-128 API controller, FFmpeg encoder, share links, admin UI, CLI commands, assets) |
-| `astraea-core/Modules/CoreModules/SonaMediaVodModule.php` | Module registration in `BootPhase::PHASE_E`, incl. its `ModuleBootstrap` entry |
-| `wp-content/plugins/Mediathek/` | VoD/Mediathek plugin and its compatibility stub |
-| `wp-content/themes/MedianetTheme/` | Sonamedia theme incl. `Designs/vgt-brave` design package |
-| `wp-content/mu-plugins/sonamedia-umbau.php` | Maintenance/preview gate MU-plugin (the `mu-plugins` directory itself is gone) |
-| `docs/sonamedia-nginx-waf-hardened.conf`, SonaMedia dossiers, `lab-results-2026-11-17` | Project-specific ops config and evidence bundles |
-| `tests/SonaMediaVodTest.php` | VoD/theme test suite, including its runner wiring |
-
-What remains is the part that belongs to the operating system: **17 first-party modules** (Recovery, GeDefense, Vault, VLP, Mail, Performance, Media, Redirects, SEO, Forms, Tasks, Database, Maintenance, Identity, Update, Compatibility, Migration) on a clean upstream core.
-
-### ⬆️ 2. WordPress 7.1.5 rebase — upstream fixes fully ingested
+### ⬆️ 1. WordPress 7.1.5 rebase — upstream fixes fully ingested
 
 The core was rebased from `7.1.4-de_DE` to `7.1.5-de_DE` without a single merge conflict, because Astraea only touches four upstream source files (plus the two branded offline readmes). The upstream delta was ingested in full, including the REST and editor surface:
 
